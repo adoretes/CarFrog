@@ -93,9 +93,9 @@ const V2_SPEC_TEMPLATE = `{
     "scenario": "场景设定（必填）",
     "first_mes": "首条消息（必填，角色的第一句话）",
     "mes_example": "示例对话（可选）",
-    "creator_notes": "创作者注释（不填留空）",
-    "system_prompt": "系统提示（不填留空）",
-    "post_history_instructions": "历史后处理指令（不填留空）",
+    "creator_notes": "创作者注释（必须留空）",
+    "system_prompt": "系统提示（必须留空）",
+    "post_history_instructions": "历史后处理指令（必须留空）",
     "alternate_greetings": ["替代问候语1", "替代问候语2"],
     "tags": ["标签1", "标签2"],
     "character_book": { "entries": [], "extensions": {} },
@@ -134,6 +134,7 @@ ${V2_SPEC_TEMPLATE}
 - tags（可选）：角色分类标签
 - character_book：**必须留空**，设为 { "entries": [], "extensions": {} }
 - extensions：**必须保留**，可设置为 {}
+- creator_notes 和 system_prompt 必须留空为字符串 ""
 
 ### 注意
 1. JSON 中的对话内容请使用中文引号“”或「」包裹，不要使用英文双引号

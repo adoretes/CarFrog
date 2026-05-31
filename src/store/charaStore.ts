@@ -93,19 +93,24 @@ function executeRemove(state: CharaCard, path: string, index: number): CharaCard
 
 interface CharaState {
   card: CharaCard
+  avatar: string | null
   setCard: (card: CharaCard) => void
   setField: (path: string, value: unknown) => void
   executeActions: (actions: CharaAction[]) => void
   loadFromJson: (json: string) => boolean
   resetCard: () => void
+  setAvatar: (dataUrl: string | null) => void
 }
 
 export const useCharaStore = create<CharaState>()(
   persist(
     (set) => ({
       card: createEmptyCharaCard(),
+      avatar: null,
 
       setCard: (card) => set({ card: ensureCharaCard(card) }),
+
+      setAvatar: (dataUrl) => set({ avatar: dataUrl }),
 
       setField: (path, value) =>
         set((state) => {
@@ -146,11 +151,11 @@ export const useCharaStore = create<CharaState>()(
         }
       },
 
-      resetCard: () => set({ card: createEmptyCharaCard() }),
+      resetCard: () => set({ card: createEmptyCharaCard(), avatar: null }),
     }),
     {
       name: 'carfrog-chara',
-      partialize: (state) => ({ card: state.card }),
+      partialize: (state) => ({ card: state.card, avatar: state.avatar }),
     },
   ),
 )

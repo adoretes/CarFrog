@@ -113,11 +113,12 @@ export function ChatMessages() {
             className={`group flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             onMouseEnter={() => setHoveredIndex(i)}
             onMouseLeave={() => setHoveredIndex(null)}
+            onClick={() => setHoveredIndex((prev) => (prev === i ? null : i))}
           >
-            <div className="max-w-[90%] relative">
+            <div className="max-w-[85%] sm:max-w-[90%] relative">
               {(hoveredIndex === i || isLastAi) && (
                 <div
-                  className={`absolute top-0 ${msg.role === 'user' ? 'left-0 -translate-x-full pl-1' : 'right-0 translate-x-full pr-1'} flex gap-0.5`}
+                  className={`absolute top-0 z-10 ${msg.role === 'user' ? 'right-0 sm:left-0 sm:right-auto sm:-translate-x-full sm:pl-1 -top-5 sm:top-0' : 'left-0 sm:right-0 sm:left-auto sm:translate-x-full sm:pr-1 -top-5 sm:top-0'} flex gap-0.5`}
                 >
                   <button
                     className="text-gray-400 hover:text-red-500 text-xs px-1 py-0.5 rounded hover:bg-gray-200 transition-colors"

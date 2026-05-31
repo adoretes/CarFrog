@@ -95,11 +95,11 @@ export function ChatInput() {
   if (mode === 'generating') return null
 
   return (
-    <div className="border-t border-gray-200 p-3">
+    <div className="border-t border-gray-200 p-2 sm:p-3">
       <div className="flex gap-2">
         <input
           ref={inputRef}
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+          className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
           placeholder={
             mode === 'brainstorm'
               ? '描述你想要的角色...'
@@ -116,7 +116,7 @@ export function ChatInput() {
           disabled={loading}
         />
         <button
-          className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          className="px-3 sm:px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap flex-shrink-0"
           onClick={handleSend}
           disabled={loading || !text.trim() || !apiConfig.apiKey}
         >

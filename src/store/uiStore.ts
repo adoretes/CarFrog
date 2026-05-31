@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 type RightTab = 'editor' | 'json' | 'preview'
+type MobileView = 'chat' | 'right'
 
 interface UiState {
   rightTab: RightTab
@@ -9,6 +10,8 @@ interface UiState {
   setShowApiConfig: (show: boolean) => void
   showPromptConfig: boolean
   setShowPromptConfig: (show: boolean) => void
+  mobileView: MobileView
+  setMobileView: (view: MobileView) => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -18,4 +21,6 @@ export const useUiStore = create<UiState>((set) => ({
   setShowApiConfig: (showApiConfig) => set({ showApiConfig }),
   showPromptConfig: false,
   setShowPromptConfig: (showPromptConfig) => set({ showPromptConfig }),
+  mobileView: 'chat',
+  setMobileView: (mobileView) => set({ mobileView }),
 }))

@@ -9,7 +9,7 @@ export function LeftPanel() {
   const mode = useChatStore((s) => s.mode)
 
   return (
-    <div className="flex flex-col h-full bg-white border-r border-gray-200">
+    <div className="flex flex-col h-full w-full min-w-0 bg-white md:border-r md:border-gray-200">
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50">
         <span className="text-sm font-medium text-gray-600">
           {mode === 'brainstorm' && '💬 头脑风暴'}
