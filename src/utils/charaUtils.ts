@@ -4,28 +4,34 @@ import { createEmptyCharaCard } from '../types'
 
 export function ensureCharaCard(raw: Partial<CharaCard>): CharaCard {
   const d = createEmptyCharaCard()
+  const data: CharaCard['data'] = {
+    name: raw.data?.name ?? d.data.name,
+    description: raw.data?.description ?? d.data.description,
+    personality: raw.data?.personality ?? d.data.personality,
+    scenario: raw.data?.scenario ?? d.data.scenario,
+    first_mes: raw.data?.first_mes ?? d.data.first_mes,
+    mes_example: raw.data?.mes_example ?? d.data.mes_example,
+    creator_notes: raw.data?.creator_notes ?? d.data.creator_notes,
+    system_prompt: raw.data?.system_prompt ?? d.data.system_prompt,
+    post_history_instructions: raw.data?.post_history_instructions ?? d.data.post_history_instructions,
+    alternate_greetings: Array.isArray(raw.data?.alternate_greetings) ? raw.data!.alternate_greetings : [],
+    tags: Array.isArray(raw.data?.tags) ? raw.data!.tags : [],
+    creator: raw.data?.creator ?? d.data.creator,
+    character_version: raw.data?.character_version ?? d.data.character_version,
+  }
+
+  if (raw.data?.character_book) {
+    data.character_book = {
+      name: raw.data.character_book.name ?? null,
+      entries: Array.isArray(raw.data.character_book.entries) ? raw.data.character_book.entries : [],
+      extensions: raw.data.character_book.extensions ?? {},
+    }
+  }
+
   return {
     spec: (raw.spec as CharaCard['spec']) || d.spec,
     spec_version: (raw.spec_version as CharaCard['spec_version']) || d.spec_version,
-    data: {
-      name: raw.data?.name ?? d.data.name,
-      description: raw.data?.description ?? d.data.description,
-      personality: raw.data?.personality ?? d.data.personality,
-      scenario: raw.data?.scenario ?? d.data.scenario,
-      first_mes: raw.data?.first_mes ?? d.data.first_mes,
-      mes_example: raw.data?.mes_example ?? d.data.mes_example,
-      creator_notes: raw.data?.creator_notes ?? d.data.creator_notes,
-      system_prompt: raw.data?.system_prompt ?? d.data.system_prompt,
-      post_history_instructions: raw.data?.post_history_instructions ?? d.data.post_history_instructions,
-      alternate_greetings: Array.isArray(raw.data?.alternate_greetings) ? raw.data!.alternate_greetings : [],
-      tags: Array.isArray(raw.data?.tags) ? raw.data!.tags : [],
-      character_book: {
-        name: raw.data?.character_book?.name ?? null,
-        entries: Array.isArray(raw.data?.character_book?.entries) ? raw.data!.character_book!.entries : [],
-        extensions: raw.data?.character_book?.extensions ?? {},
-      },
-      extensions: raw.data?.extensions ?? {},
-    },
+    data,
   }
 }
 
@@ -93,13 +99,13 @@ const V2_SPEC_TEMPLATE = `{
     "scenario": "场景设定（必填）",
     "first_mes": "首条消息（必填，角色的第一句话）",
     "mes_example": "示例对话（可选）",
-    "creator_notes": "创作者注释（必须留空）",
-    "system_prompt": "系统提示（必须留空）",
-    "post_history_instructions": "历史后处理指令（必须留空）",
+    "creator_notes": "",
+    "system_prompt": "",
+    "post_history_instructions": "",
     "alternate_greetings": ["替代问候语1", "替代问候语2"],
     "tags": ["标签1", "标签2"],
-    "character_book": { "entries": [], "extensions": {} },
-    "extensions": {}
+    "creator": "",
+    "character_version": "1.0"
   }
 }`
 
@@ -132,9 +138,9 @@ ${V2_SPEC_TEMPLATE}
 - mes_example（可选）：示例对话，用于引导角色语言风格
 - alternate_greetings（可选）：替代开场问候语列表
 - tags（可选）：角色分类标签
-- character_book：**必须留空**，设为 { "entries": [], "extensions": {} }
-- extensions：**必须保留**，可设置为 {}
-- creator_notes 和 system_prompt 必须留空为字符串 ""
+- creator（默认留空）：创作者名称，留空为 ""
+- character_version（默认1.0）：角色版本号，默认为 "1.0"
+- creator_notes、system_prompt、post_history_instructions：**必须留空**，设为 ""
 
 ### 注意
 1. JSON 中的对话内容请使用中文引号“”或「」包裹，不要使用英文双引号

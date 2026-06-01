@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { fetchModels } from '../../api/aiChat'
 import { useChatStore } from '../../store/chatStore'
 import { useUiStore } from '../../store/uiStore'
 import { useChatStore as useChatMode } from '../../store/chatStore'
@@ -16,6 +17,39 @@ export function PromptConfig() {
   const setRefinePrompt = useChatStore((s) => s.setRefinePrompt)
   const currentMode = useChatMode((s) => s.mode)
   const [promptTab, setPromptTab] = useState<PromptTab>('brainstorm')
+  const [models, setModels] = useState<string[]>([])
+  const [modelLoading, setModelLoading] = useState(false)
+  const [modelError, setModelError] = useState('')
+  const [modelMenuOpen, setModelMenuOpen] = useState(false)
+  const modelMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!modelMenuRef.current?.contains(event.target as Node)) {
+        setModelMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleFetchModels = async () => {
+    setModelLoading(true)
+    setModelError('')
+    try {
+      const list = await fetchModels(apiConfig)
+      setModels(list)
+      setModelMenuOpen(list.length > 0)
+      if (list.length > 0 && !list.includes(apiConfig.model)) {
+        setApiConfig({ model: list[0] })
+      }
+    } catch (error) {
+      setModelError(error instanceof Error ? error.message : '拉取模型失败')
+    } finally {
+      setModelLoading(false)
+    }
+  }
 
   const promptValue = {
     brainstorm: brainstormPrompt,
@@ -61,12 +95,44 @@ export function PromptConfig() {
             value={apiConfig.apiKey}
             onChange={(e) => setApiConfig({ apiKey: e.target.value })}
           />
-          <input
-            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400"
-            placeholder="Model (e.g. gpt-4o)"
-            value={apiConfig.model}
-            onChange={(e) => setApiConfig({ model: e.target.value })}
-          />
+          <div className="relative" ref={modelMenuRef}>
+            <input
+              className="w-full px-2 py-1.5 pr-20 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              placeholder="Model (e.g. gpt-4o)"
+              value={apiConfig.model}
+              onChange={(e) => setApiConfig({ model: e.target.value })}
+            />
+            <button
+              className="absolute right-0 top-0 h-full px-2 text-xs text-white bg-indigo-500 rounded-r hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={modelLoading || !apiConfig.baseUrl}
+              onClick={() => {
+                if (models.length > 0) {
+                  setModelMenuOpen(!modelMenuOpen)
+                } else {
+                  handleFetchModels()
+                }
+              }}
+            >
+              {modelLoading ? '拉取中' : models.length > 0 ? '列表' : '拉取'}
+            </button>
+            {modelMenuOpen && models.length > 0 && (
+              <div className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded border border-gray-300 bg-white shadow">
+                {models.map((model) => (
+                  <button
+                    key={model}
+                    className="block w-full px-2 py-1.5 text-left text-xs text-gray-700 hover:bg-indigo-50"
+                    onClick={() => {
+                      setApiConfig({ model })
+                      setModelMenuOpen(false)
+                    }}
+                  >
+                    {model}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {modelError && <div className="text-xs text-red-500">{modelError}</div>}
         </div>
       )}
 

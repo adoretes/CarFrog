@@ -1,5 +1,12 @@
 import type { ApiMessage, ApiConfig } from '../types/actions'
 
+function buildHeaders(config: ApiConfig): HeadersInit {
+  return {
+    'Content-Type': 'application/json',
+    ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}),
+  }
+}
+
 function serializeMessages(
   systemPrompt: string,
   messages: ApiMessage[],
@@ -10,6 +17,35 @@ function serializeMessages(
   ]
 }
 
+export async function fetchModels(config: ApiConfig): Promise<string[]> {
+  const response = await fetch(`${config.baseUrl.replace(/\/$/, '')}/models`, {
+    method: 'GET',
+    headers: buildHeaders(config),
+  })
+
+  if (!response.ok) {
+    const err = await response.text()
+    throw new Error(`API Error ${response.status}: ${err}`)
+  }
+
+  const data = await response.json()
+  const source = Array.isArray(data) ? data : data.data || data.models || []
+  return Array.from(
+    new Set(
+      source
+        .map((model: unknown) => {
+          if (typeof model === 'string') return model
+          if (model && typeof model === 'object') {
+            const item = model as { id?: unknown; name?: unknown; model?: unknown }
+            return item.id || item.name || item.model
+          }
+          return null
+        })
+        .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0),
+    ),
+  )
+}
+
 export async function sendChatMessage(
   messages: ApiMessage[],
   systemPrompt: string,
@@ -18,10 +54,7 @@ export async function sendChatMessage(
 ): Promise<string> {
   const response = await fetch(`${config.baseUrl}/chat/completions`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.apiKey}`,
-    },
+    headers: buildHeaders(config),
     body: JSON.stringify({
       model: config.model,
       messages: serializeMessages(systemPrompt, messages),
@@ -71,10 +104,7 @@ export async function sendChatMessageNonStream(
 ): Promise<string> {
   const response = await fetch(`${config.baseUrl}/chat/completions`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.apiKey}`,
-    },
+    headers: buildHeaders(config),
     body: JSON.stringify({
       model: config.model,
       messages: serializeMessages(systemPrompt, messages),

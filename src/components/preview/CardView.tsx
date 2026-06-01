@@ -111,11 +111,11 @@ export function CardView() {
           </div>
         )}
 
-        {d.character_book.entries.length > 0 && (
+        {(d.character_book?.entries.length ?? 0) > 0 && (
           <div className="bg-white rounded-xl p-4 border border-gray-200">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">📚 世界书（{d.character_book.entries.length} 条目）</h3>
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">📚 世界书（{d.character_book?.entries.length} 条目）</h3>
             <div className="space-y-2">
-              {d.character_book.entries.map((entry, i) => (
+              {d.character_book?.entries.map((entry, i) => (
                 <div key={i} className="bg-amber-50 rounded-lg p-3 border border-amber-200">
                   <div className="flex flex-wrap gap-1 mb-1">
                     {entry.keys.map((k, j) => (

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { createEmptyCharaCard, type CharaCard } from '../types'
+import { createEmptyCharaCard, type CharaCard, type WorldBook } from '../types'
 import type { CharaAction } from '../types/actions'
 import { ensureCharaCard } from '../utils/charaUtils'
 
@@ -73,8 +73,21 @@ function executeSet(state: CharaCard, path: string, value: unknown, index?: numb
   return newCard
 }
 
+function ensureWorldBook(card: CharaCard): WorldBook {
+  if (!card.data.character_book) {
+    card.data.character_book = { name: card.data.name || null, entries: [], extensions: {} }
+  } else if (!('name' in card.data.character_book)) {
+    card.data.character_book.name = card.data.name || null
+  }
+  return card.data.character_book
+}
+
 function executeAdd(state: CharaCard, path: string, value: unknown): CharaCard {
   const newCard = structuredClone(state)
+  if (path === 'data.character_book.entries') {
+    ensureWorldBook(newCard).entries.push(value as never)
+    return newCard
+  }
   const arr = getNestedValue(newCard, path)
   if (Array.isArray(arr)) {
     arr.push(value)
@@ -115,6 +128,9 @@ export const useCharaStore = create<CharaState>()(
       setField: (path, value) =>
         set((state) => {
           const newCard = structuredClone(state.card)
+          if (path === 'data.character_book.entries') {
+            ensureWorldBook(newCard)
+          }
           setNestedValue(newCard as unknown as Record<string, unknown>, path, value)
           return { card: newCard }
         }),

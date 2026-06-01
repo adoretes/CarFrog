@@ -36,8 +36,9 @@ export interface CharaCardData {
   post_history_instructions: string
   alternate_greetings: string[]
   tags: string[]
-  character_book: WorldBook
-  extensions: Record<string, unknown>
+  creator: string
+  character_version: string
+  character_book?: WorldBook
 }
 
 export interface CharaCardV2 {
@@ -64,20 +65,12 @@ export function createEmptyCharaCard(): CharaCard {
       post_history_instructions: '',
       alternate_greetings: [],
       tags: [],
+      creator: '',
+      character_version: '1.0',
       character_book: {
         name: null,
         entries: [],
         extensions: {},
-      },
-      extensions: {
-        talkativeness: '0.5',
-        fav: false,
-        world: '',
-        depth_prompt: {
-          prompt: '',
-          depth: 4,
-          role: 'system',
-        },
       },
     },
   }

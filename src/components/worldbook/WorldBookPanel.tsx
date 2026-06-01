@@ -4,20 +4,20 @@ import { createDefaultWorldBookEntry } from '../../types'
 
 export function WorldBookPanel() {
   const { card, setField } = useCharaStore()
-  const wb = card.data.character_book
+  const wb = card.data.character_book ?? { name: card.data.name || null, entries: [] }
 
   const addEntry = () => {
     const newEntry = createDefaultWorldBookEntry()
-    setField('data.character_book.entries', [...wb.entries, newEntry])
+    setField('data.character_book', { ...wb, entries: [...wb.entries, newEntry] })
   }
 
   const updateEntry = (index: number, entry: typeof wb.entries[0]) => {
     const updated = wb.entries.map((e, i) => (i === index ? entry : e))
-    setField('data.character_book.entries', updated)
+    setField('data.character_book', { ...wb, entries: updated })
   }
 
   const removeEntry = (index: number) => {
-    setField('data.character_book.entries', wb.entries.filter((_, i) => i !== index))
+    setField('data.character_book', { ...wb, entries: wb.entries.filter((_, i) => i !== index) })
   }
 
   return (
