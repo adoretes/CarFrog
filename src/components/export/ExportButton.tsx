@@ -29,7 +29,6 @@ export function ExportButton() {
   const jsonInputRef = useRef<HTMLInputElement>(null)
   const pngExportRef = useRef<HTMLInputElement>(null)
   const pngImportRef = useRef<HTMLInputElement>(null)
-  const avatarInputRef = useRef<HTMLInputElement>(null)
   const [showMenu, setShowMenu] = useState(false)
 
   const hasData = !!card.data.name
@@ -95,31 +94,13 @@ export function ExportButton() {
     e.target.value = ''
   }
 
-  const handleAvatarImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    try {
-      const dataUrl = await fileToDataUrl(file)
-      setAvatar(dataUrl)
-      addMessage({ role: 'assistant', content: `✅ 已导入头像：${file.name}` })
-    } catch {
-      addMessage({ role: 'assistant', content: '❌ 头像导入失败' })
-    }
-    e.target.value = ''
-  }
-
-  const handleRemoveAvatar = () => {
-    setAvatar(null)
-    addMessage({ role: 'assistant', content: '🗑️ 已移除头像' })
-  }
-
   return (
     <div className="relative">
       <button
         className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors whitespace-nowrap"
         onClick={() => setShowMenu(!showMenu)}
       >
-        📦 <span className="hidden sm:inline">导出 / 导入</span><span className="sm:hidden">文件</span>
+        📦 导出 / 导入
       </button>
 
       {showMenu && (
@@ -180,28 +161,6 @@ export function ExportButton() {
             >
               🖼️ 导入 PNG 角色卡
             </button>
-            <div className="border-t border-gray-100 my-1" />
-            <div className="px-3 py-1 text-xs text-gray-400 font-medium">头像</div>
-            <button
-              className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-50"
-              onClick={() => {
-                avatarInputRef.current?.click()
-                setShowMenu(false)
-              }}
-            >
-              🎨 {hasAvatar ? '更换头像' : '导入头像'}
-            </button>
-            {hasAvatar && (
-              <button
-                className="w-full px-4 py-2 text-sm text-left text-rose-600 hover:bg-rose-50"
-                onClick={() => {
-                  handleRemoveAvatar()
-                  setShowMenu(false)
-                }}
-              >
-                🗑️ 移除头像
-              </button>
-            )}
           </div>
         </>
       )}
@@ -209,7 +168,6 @@ export function ExportButton() {
       <input ref={jsonInputRef} type="file" accept=".json" className="hidden" onChange={handleImportJson} />
       <input ref={pngExportRef} type="file" accept=".png,.jpg,.jpeg,.webp" className="hidden" onChange={handlePngExport} />
       <input ref={pngImportRef} type="file" accept=".png" className="hidden" onChange={handlePngImport} />
-      <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarImport} />
     </div>
   )
 }

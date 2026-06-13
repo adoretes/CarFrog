@@ -1,5 +1,6 @@
 import { LeftPanel } from './components/layout/LeftPanel'
 import { RightPanel } from './components/layout/RightPanel'
+import { AvatarButton } from './components/export/AvatarButton'
 import { ExportButton } from './components/export/ExportButton'
 import { useCharaStore } from './store/charaStore'
 import { useChatStore } from './store/chatStore'
@@ -33,6 +34,7 @@ export default function App() {
           >
             ✨ <span className="hidden sm:inline">新建</span>
           </button>
+          <AvatarButton />
           <ExportButton />
         </div>
       </header>
