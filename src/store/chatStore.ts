@@ -19,6 +19,7 @@ interface ChatState {
   addMessage: (msg: ChatMessage) => void
   setMessages: (msgs: ChatMessage[]) => void
   removeMessage: (index: number) => void
+  excludePreviousMessages: () => void
   setMode: (mode: ChatMode) => void
   setApiConfig: (config: Partial<ApiConfig>) => void
   setBrainstormPrompt: (prompt: string) => void
@@ -55,6 +56,11 @@ export const useChatStore = create<ChatState>()(
       removeMessage: (index) =>
         set((state) => ({
           messages: state.messages.filter((_, i) => i !== index),
+        })),
+
+      excludePreviousMessages: () =>
+        set((state) => ({
+          messages: state.messages.map((m) => ({ ...m, excluded: true })),
         })),
 
       setMode: (mode) => set({ mode }),

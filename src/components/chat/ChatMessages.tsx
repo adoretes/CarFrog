@@ -3,12 +3,29 @@ import ReactMarkdown from 'react-markdown'
 import { useChatStore } from '../../store/chatStore'
 import type { Components } from 'react-markdown'
 
+function CollapsiblePre({ children }: { children?: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="my-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 mb-1 select-none"
+      >
+        <span className={`inline-block transition-transform ${open ? 'rotate-90' : ''}`}>▶</span>
+        <span>{open ? '隐藏代码块' : '显示代码块'}</span>
+      </button>
+      {open && (
+        <pre className="bg-gray-900 text-green-300 rounded-lg p-3 overflow-x-auto text-xs leading-relaxed">
+          {children}
+        </pre>
+      )}
+    </div>
+  )
+}
+
 const markdownComponents: Components = {
-  pre: ({ children }) => (
-    <pre className="bg-gray-900 text-green-300 rounded-lg p-3 overflow-x-auto text-xs leading-relaxed my-2">
-      {children}
-    </pre>
-  ),
+  pre: ({ children }) => <CollapsiblePre>{children}</CollapsiblePre>,
   code: ({ className, children, ...props }) => {
     const isInline = !className
     return isInline ? (
@@ -107,62 +124,81 @@ export function ChatMessages() {
     <div className="flex-1 overflow-y-auto p-3 space-y-3 chat-messages">
       {messages.map((msg, i) => {
         const isLastAi = i === messages.length - 1 && msg.role === 'assistant'
+        const isExcluded = msg.excluded === true
+        const prevExcluded = i > 0 ? messages[i - 1].excluded === true : false
+        const showDivider = isExcluded && i < messages.length - 1 && messages[i + 1].excluded !== true
         return (
-          <div
-            key={i}
-            className={`group flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            onMouseEnter={() => setHoveredIndex(i)}
-            onMouseLeave={() => setHoveredIndex(null)}
-            onClick={() => setHoveredIndex((prev) => (prev === i ? null : i))}
-          >
-            <div className="max-w-[85%] sm:max-w-[90%] relative">
-              {(hoveredIndex === i || isLastAi) && (
-                <div
-                  className={`absolute top-0 z-10 ${msg.role === 'user' ? 'right-0 sm:left-0 sm:right-auto sm:-translate-x-full sm:pl-1 -top-5 sm:top-0' : 'left-0 sm:right-0 sm:left-auto sm:translate-x-full sm:pr-1 -top-5 sm:top-0'} flex gap-0.5`}
-                >
-                  <button
-                    className="text-gray-400 hover:text-red-500 text-xs px-1 py-0.5 rounded hover:bg-gray-200 transition-colors"
-                    onClick={() => removeMessage(i)}
-                    title="删除"
+          <div key={i}>
+            {!isExcluded && prevExcluded && (
+              <div className="flex items-center gap-2 my-3 text-[10px] text-gray-400 select-none">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span>以下为精修阶段</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+            )}
+            <div
+              className={`group flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} ${isExcluded ? 'opacity-50' : ''}`}
+              onMouseEnter={() => setHoveredIndex(i)}
+              onMouseLeave={() => setHoveredIndex(null)}
+              onClick={() => setHoveredIndex((prev) => (prev === i ? null : i))}
+              title={isExcluded ? '此消息已折叠，不参与精修上下文' : undefined}
+            >
+              <div className="max-w-[85%] sm:max-w-[90%] relative">
+                {(hoveredIndex === i || isLastAi) && (
+                  <div
+                    className={`absolute top-0 z-10 ${msg.role === 'user' ? 'right-0 sm:left-0 sm:right-auto sm:-translate-x-full sm:pl-1 -top-5 sm:top-0' : 'left-0 sm:right-0 sm:left-auto sm:translate-x-full sm:pr-1 -top-5 sm:top-0'} flex gap-0.5`}
                   >
-                    ×
-                  </button>
-                  {isLastAi && (
                     <button
-                      className="text-gray-400 hover:text-indigo-600 text-xs px-1 py-0.5 rounded hover:bg-gray-200 transition-colors"
-                      onClick={handleRegenerate}
-                      title="重新生成"
+                      className="text-gray-400 hover:text-red-500 text-xs px-1 py-0.5 rounded hover:bg-gray-200 transition-colors"
+                      onClick={() => removeMessage(i)}
+                      title="删除"
                     >
-                      ↻
+                      ×
                     </button>
+                    {isLastAi && !isExcluded && (
+                      <button
+                        className="text-gray-400 hover:text-indigo-600 text-xs px-1 py-0.5 rounded hover:bg-gray-200 transition-colors"
+                        onClick={handleRegenerate}
+                        title="重新生成"
+                      >
+                        ↻
+                      </button>
+                    )}
+                  </div>
+                )}
+                <div
+                  className={`rounded-lg px-3 py-2 text-sm leading-relaxed ${
+                    msg.role === 'user'
+                      ? 'bg-indigo-100 text-gray-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}
+                >
+                  {msg.role === 'user' ? (
+                    <span className="whitespace-pre-wrap">{msg.content}</span>
+                  ) : (
+                    <>
+                      {msg.content.includes('<actions>') ? (
+                        <div className="mb-1">
+                          <span className="inline-flex items-center gap-1 text-xs text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">
+                            📋 动作指令已应用
+                          </span>
+                        </div>
+                      ) : null}
+                      <ReactMarkdown components={markdownComponents}>
+                        {msg.content.replace(/<actions>[\s\S]*?<\/actions>/g, '')}
+                      </ReactMarkdown>
+                    </>
                   )}
                 </div>
-              )}
-              <div
-                className={`rounded-lg px-3 py-2 text-sm leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-indigo-100 text-gray-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}
-              >
-                {msg.role === 'user' ? (
-                  <span className="whitespace-pre-wrap">{msg.content}</span>
-                ) : (
-                  <>
-                    {msg.content.includes('<actions>') ? (
-                      <div className="mb-1">
-                        <span className="inline-flex items-center gap-1 text-xs text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">
-                          📋 动作指令已应用
-                        </span>
-                      </div>
-                    ) : null}
-                    <ReactMarkdown components={markdownComponents}>
-                      {msg.content.replace(/<actions>[\s\S]*?<\/actions>/g, '')}
-                    </ReactMarkdown>
-                  </>
-                )}
               </div>
             </div>
+            {showDivider && (
+              <div className="flex items-center gap-2 my-3 text-[10px] text-gray-400 select-none">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span>头脑风暴结束</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+            )}
           </div>
         )
       })}

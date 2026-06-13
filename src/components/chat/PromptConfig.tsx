@@ -3,6 +3,11 @@ import { fetchModels } from '../../api/aiChat'
 import { useChatStore } from '../../store/chatStore'
 import { useUiStore } from '../../store/uiStore'
 import { useChatStore as useChatMode } from '../../store/chatStore'
+import {
+  DEFAULT_BRAINSTORM_PROMPT,
+  DEFAULT_GENERATE_PROMPT,
+  DEFAULT_REFINE_PROMPT,
+} from '../../utils/charaUtils'
 
 type PromptTab = 'brainstorm' | 'generate' | 'refine'
 
@@ -62,6 +67,14 @@ export function PromptConfig() {
     generate: setGeneratePrompt,
     refine: setRefinePrompt,
   }[promptTab]
+
+  const defaultPrompt = {
+    brainstorm: DEFAULT_BRAINSTORM_PROMPT,
+    generate: DEFAULT_GENERATE_PROMPT,
+    refine: DEFAULT_REFINE_PROMPT,
+  }[promptTab]
+
+  const isDefault = promptValue === defaultPrompt
 
   return (
     <>
@@ -159,6 +172,16 @@ export function PromptConfig() {
             value={promptValue}
             onChange={(e) => setPromptValue(e.target.value)}
           />
+          <div className="flex justify-end px-2 py-1 border-t border-gray-200 bg-white">
+            <button
+              className="text-xs text-gray-500 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              onClick={() => setPromptValue(defaultPrompt)}
+              disabled={isDefault}
+              title={isDefault ? '当前已是默认提示词' : '恢复为默认提示词'}
+            >
+              ↺ 恢复默认
+            </button>
+          </div>
         </div>
       )}
     </>

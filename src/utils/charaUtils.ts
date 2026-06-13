@@ -142,10 +142,17 @@ ${V2_SPEC_TEMPLATE}
 - character_version（默认1.0）：角色版本号，默认为 "1.0"
 - creator_notes、system_prompt、post_history_instructions：**必须留空**，设为 ""
 
+### 输出结构（必须严格遵守）
+依次输出两部分：
+
+1. **角色摘要**：使用 \`## 角色摘要\` 作为标题，用简洁中文段落概述：角色名、核心定位、性格关键词、外貌亮点、场景设定、说话风格。这段摘要将作为后续精修阶段的上下文锚点，请确保信息准确凝练（150-300字）。
+
+2. **角色卡 JSON**：使用 \`## 角色卡\` 作为标题，将完整 JSON 包裹在 \`\`\`json 代码块中。
+
 ### 注意
 1. JSON 中的对话内容请使用中文引号“”或「」包裹，不要使用英文双引号
 2. 永远不要生成 world book 条目，后续会在精修阶段添加
-3. 将完整 JSON 包裹在 \`\`\`json 代码块中
+3. 必须先输出角色摘要，再输出角色卡 JSON
 4. 用中文与用户交流`
 
 export const DEFAULT_REFINE_PROMPT = `用户可以对角色卡任意字段或世界书条目提出修改要求。
@@ -179,11 +186,13 @@ value 中的对话内容请使用中文引号“”或「」包裹，不要使�
 - 用中文与用户交流`
 
 export function buildApiMessages(
-  messages: { role: 'user' | 'assistant'; content: string }[],
+  messages: { role: 'user' | 'assistant'; content: string; excluded?: boolean }[],
   userText: string,
   uploadedFiles: { name: string; content: string; type: string }[],
 ): ApiMessage[] {
-  const history: ApiMessage[] = messages.map((m) => ({ role: m.role, content: m.content }))
+  const history: ApiMessage[] = messages
+    .filter((m) => !m.excluded)
+    .map((m) => ({ role: m.role, content: m.content }))
 
   if (uploadedFiles.length === 0) {
     return [...history, { role: 'user', content: userText }]

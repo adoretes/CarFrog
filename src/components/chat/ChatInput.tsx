@@ -8,6 +8,7 @@ import {
   buildApiMessages,
   buildRefineSystemPrompt,
 } from '../../utils/charaUtils'
+import { useGenerateCard } from './useGenerateCard'
 
 export function ChatInput() {
   const [text, setText] = useState('')
@@ -16,6 +17,7 @@ export function ChatInput() {
   const messages = useChatStore((s) => s.messages)
   const mode = useChatStore((s) => s.mode)
   const setMode = useChatStore((s) => s.setMode)
+  const excludePreviousMessages = useChatStore((s) => s.excludePreviousMessages)
   const apiConfig = useChatStore((s) => s.apiConfig)
   const brainstormPrompt = useChatStore((s) => s.brainstormPrompt)
   const refinePrompt = useChatStore((s) => s.refinePrompt)
@@ -26,6 +28,7 @@ export function ChatInput() {
   const setCard = useCharaStore((s) => s.setCard)
   const executeActions = useCharaStore((s) => s.executeActions)
   const inputRef = useRef<HTMLInputElement>(null)
+  const { generate: generateCard } = useGenerateCard()
 
   const doSend = useCallback(async (content: string) => {
     setLoading(true)
@@ -54,7 +57,8 @@ export function ChatInput() {
         const parsedCard = parseJsonFromText(fullContent)
         if (parsedCard) {
           setCard(parsedCard)
-          addMessage({ role: 'assistant', content: '✅ 已识别角色卡数据，自动切换到精修模式。' })
+          excludePreviousMessages()
+          addMessage({ role: 'assistant', content: '✅ 已识别角色卡数据，头脑风暴阶段的对话已折叠（不再参与精修上下文），自动切换到精修模式。' })
           setMode('refine')
         }
       } else if (mode === 'refine') {
@@ -77,8 +81,13 @@ export function ChatInput() {
     const trimmed = text.trim()
     if (!trimmed || loading) return
     setText('')
+    if (mode === 'brainstorm' && trimmed.includes('生成')) {
+      addMessage({ role: 'user', content: trimmed })
+      generateCard()
+      return
+    }
     doSend(trimmed)
-  }, [text, loading, doSend])
+  }, [text, loading, mode, doSend, addMessage, generateCard])
 
   useEffect(() => {
     if (pendingRegenerate && !loading) {

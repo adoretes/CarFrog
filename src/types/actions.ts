@@ -26,6 +26,7 @@ export type ChatMode = 'brainstorm' | 'generating' | 'refine'
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
+  excluded?: boolean
 }
 
 export interface ContentPart {
