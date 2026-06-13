@@ -167,7 +167,7 @@ export function PromptConfig() {
             ))}
           </div>
           <textarea
-            className="w-full px-2 py-1.5 text-xs border-0 focus:outline-none focus:ring-0 font-mono resize-none"
+            className="w-full px-2 py-1.5 text-xs border-0 focus:outline-none focus:ring-0 font-mono resize-y"
             rows={6}
             value={promptValue}
             onChange={(e) => setPromptValue(e.target.value)}
