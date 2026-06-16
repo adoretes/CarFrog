@@ -19,8 +19,9 @@ export function EntryEditor({ entry, index, onChange, onRemove }: EntryEditorPro
   return (
     <div className="border border-gray-200 rounded-lg p-3 bg-white">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-medium text-gray-600">
-          条目 #{index + 1}
+        <span className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
+          {entry.comment || `条目 #${index + 1}`}
+          {entry.constant && <span className="text-[10px] px-1 py-0.5 bg-indigo-100 text-indigo-600 rounded">常驻</span>}
         </span>
         <div className="flex gap-1">
           <button

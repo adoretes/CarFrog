@@ -50,8 +50,8 @@ export function JsonView() {
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-full gap-2">
+      <div className="flex items-center justify-between shrink-0">
         <h3 className="text-sm font-semibold text-gray-700">原始 JSON</h3>
         <div className="flex gap-1">
           {editing ? (
@@ -89,14 +89,14 @@ export function JsonView() {
       </div>
 
       {error && (
-        <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded px-3 py-1">
+        <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded px-3 py-1 shrink-0">
           {error}
         </div>
       )}
 
       {editing ? (
         <textarea
-          className="w-full border border-indigo-300 rounded-lg p-4 text-xs font-mono overflow-auto min-h-[60vh] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+          className="w-full flex-1 min-h-0 border border-indigo-300 rounded-lg p-4 text-xs font-mono overflow-auto leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
           value={editText}
           onChange={(e) => {
             setEditText(e.target.value)
@@ -105,7 +105,7 @@ export function JsonView() {
         />
       ) : (
         <pre
-          className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-xs font-mono overflow-auto max-h-[70vh] leading-relaxed cursor-pointer hover:border-gray-300 transition-colors"
+          className="flex-1 min-h-0 bg-gray-50 border border-gray-200 rounded-lg p-4 text-xs font-mono overflow-auto leading-relaxed cursor-pointer hover:border-gray-300 transition-colors"
           onClick={startEditing}
           title="点击编辑"
         >

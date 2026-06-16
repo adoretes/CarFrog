@@ -117,6 +117,10 @@ export function CardView() {
             <div className="space-y-2">
               {d.character_book?.entries.map((entry, i) => (
                 <div key={i} className="bg-amber-50 rounded-lg p-3 border border-amber-200">
+                  <div className="text-xs font-medium text-amber-900 mb-1 flex items-center gap-1.5">
+                    {entry.comment || `条目 #${i + 1}`}
+                    {entry.constant && <span className="text-[10px] px-1 py-0.5 bg-indigo-200 text-indigo-700 rounded">常驻</span>}
+                  </div>
                   <div className="flex flex-wrap gap-1 mb-1">
                     {entry.keys.map((k, j) => (
                       <span key={j} className="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-xs">
