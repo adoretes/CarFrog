@@ -26,6 +26,7 @@ export function ExportButton() {
   const setAvatar = useCharaStore((s) => s.setAvatar)
   const addMessage = useChatStore((s) => s.addMessage)
   const setMode = useChatStore((s) => s.setMode)
+  const resetChat = useChatStore((s) => s.resetChat)
   const jsonInputRef = useRef<HTMLInputElement>(null)
   const pngExportRef = useRef<HTMLInputElement>(null)
   const pngImportRef = useRef<HTMLInputElement>(null)
@@ -41,6 +42,8 @@ export function ExportButton() {
       const text = await file.text()
       const parsed = JSON.parse(text)
       if (parsed?.spec && parsed?.data) {
+        resetChat()
+        setAvatar(null)
         setCard(parsed)
         addMessage({ role: 'assistant', content: `✅ 已导入角色卡：${parsed.data.name || '未命名'}` })
         setMode('refine')
@@ -79,6 +82,7 @@ export function ExportButton() {
     if (!file) return
     const imported = await importFromPng(file)
     if (imported) {
+      resetChat()
       setCard(imported)
       try {
         const dataUrl = await fileToDataUrl(file)
