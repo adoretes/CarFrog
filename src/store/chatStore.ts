@@ -14,7 +14,6 @@ interface ChatState {
   brainstormPrompt: string
   generatePrompt: string
   refinePrompt: string
-  uploadedFiles: { name: string; content: string; type: string }[]
   pendingRegenerate: string | null
   addMessage: (msg: ChatMessage) => void
   setMessages: (msgs: ChatMessage[]) => void
@@ -26,9 +25,6 @@ interface ChatState {
   setGeneratePrompt: (prompt: string) => void
   setRefinePrompt: (prompt: string) => void
   setPendingRegenerate: (text: string | null) => void
-  addFile: (file: { name: string; content: string; type: string }) => void
-  removeFile: (index: number) => void
-  clearFiles: () => void
   resetChat: () => void
 }
 
@@ -45,7 +41,6 @@ export const useChatStore = create<ChatState>()(
       brainstormPrompt: DEFAULT_BRAINSTORM_PROMPT,
       generatePrompt: DEFAULT_GENERATE_PROMPT,
       refinePrompt: DEFAULT_REFINE_PROMPT,
-      uploadedFiles: [],
       pendingRegenerate: null,
 
       addMessage: (msg) =>
@@ -74,21 +69,10 @@ export const useChatStore = create<ChatState>()(
 
       setPendingRegenerate: (pendingRegenerate) => set({ pendingRegenerate }),
 
-      addFile: (file) =>
-        set((state) => ({ uploadedFiles: [...state.uploadedFiles, file] })),
-
-      removeFile: (index) =>
-        set((state) => ({
-          uploadedFiles: state.uploadedFiles.filter((_, i) => i !== index),
-        })),
-
-      clearFiles: () => set({ uploadedFiles: [] }),
-
       resetChat: () =>
         set({
           messages: [],
           mode: 'brainstorm',
-          uploadedFiles: [],
           pendingRegenerate: null,
         }),
     }),

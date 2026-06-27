@@ -5,11 +5,11 @@ import { sendChatMessageNonStream } from '../../api/aiChat'
 import { parseJsonFromText, buildApiMessages } from '../../utils/charaUtils'
 
 export function useGenerateCard() {
-  const { mode, setMode, messages, apiConfig, addMessage, generatePrompt, uploadedFiles, excludePreviousMessages } = useChatStore()
+  const { mode, setMode, messages, apiConfig, addMessage, generatePrompt, excludePreviousMessages } = useChatStore()
   const setCard = useCharaStore((s) => s.setCard)
   const [loading, setLoading] = useState(false)
 
-  const generate = useCallback(async () => {
+  const generate = useCallback(async (currentFiles: { name: string; content: string; type: string }[] = []) => {
     if (messages.length === 0) {
       addMessage({ role: 'assistant', content: '请先在聊天中讨论角色设定，再点击生成。' })
       return
@@ -23,7 +23,7 @@ export function useGenerateCard() {
     setLoading(true)
     setMode('generating')
 
-    const generateMsg = buildApiMessages(messages, '请根据我们的讨论，生成完整的角色卡 JSON 和世界书条目。', uploadedFiles)
+    const generateMsg = buildApiMessages(messages, '请根据我们的讨论，生成完整的角色卡 JSON 和世界书条目。', currentFiles)
 
     const summary = generateMsg
       .map((m) => `${m.role === 'user' ? '用户' : 'AI'}：${typeof m.content === 'string' ? m.content : '[包含图片]'}`)
@@ -59,7 +59,7 @@ export function useGenerateCard() {
     } finally {
       setLoading(false)
     }
-  }, [messages, apiConfig, generatePrompt, uploadedFiles, addMessage, setMode, setCard, excludePreviousMessages])
+  }, [messages, apiConfig, generatePrompt, addMessage, setMode, setCard, excludePreviousMessages])
 
   return { generate, loading, mode }
 }

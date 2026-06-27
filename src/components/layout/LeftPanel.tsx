@@ -1,12 +1,31 @@
+import { useState, useCallback } from 'react'
 import { ChatMessages } from '../chat/ChatMessages'
 import { ChatInput } from '../chat/ChatInput'
 import { PromptConfig } from '../chat/PromptConfig'
 import { GenerateButton } from '../chat/GenerateButton'
-import { FileUpload } from '../chat/FileUpload'
+import { FileUpload, type FileItem } from '../chat/FileUpload'
 import { useChatStore } from '../../store/chatStore'
+
+let fileIdCounter = 0
 
 export function LeftPanel() {
   const mode = useChatStore((s) => s.mode)
+  const [fileItems, setFileItems] = useState<FileItem[]>([])
+
+  const handleAddFile = useCallback((fileList: FileList) => {
+    const file = fileList[0]
+    if (!file) return
+    const id = `file_${++fileIdCounter}`
+    setFileItems((prev) => [...prev, { id, file }])
+  }, [])
+
+  const handleRemoveFile = useCallback((id: string) => {
+    setFileItems((prev) => prev.filter((f) => f.id !== id))
+  }, [])
+
+  const handleSendComplete = useCallback(() => {
+    setFileItems([])
+  }, [])
 
   return (
     <div className="flex flex-col h-full w-full min-w-0 bg-white md:border-r md:border-gray-200">
@@ -23,9 +42,13 @@ export function LeftPanel() {
 
       <ChatMessages />
 
-      <FileUpload />
+      <FileUpload
+        files={fileItems}
+        onAdd={handleAddFile}
+        onRemove={handleRemoveFile}
+      />
 
-      <ChatInput />
+      <ChatInput files={fileItems} onSendComplete={handleSendComplete} />
     </div>
   )
 }

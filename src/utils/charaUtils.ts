@@ -1,4 +1,4 @@
-import type { CharaAction, ApiMessage, ContentPart } from '../types/actions'
+import type { CharaAction, ApiMessage, ContentPart, ChatMessage } from '../types/actions'
 import type { CharaCard } from '../types'
 import { createEmptyCharaCard } from '../types'
 
@@ -185,21 +185,34 @@ value 中的对话内容请使用中文引号“”或「」包裹，不要使�
 - 只输出需要变更的部分，精炼准确
 - 用中文与用户交流`
 
-export function buildApiMessages(
-  messages: { role: 'user' | 'assistant'; content: string; excluded?: boolean }[],
-  userText: string,
-  uploadedFiles: { name: string; content: string; type: string }[],
-): ApiMessage[] {
-  const history: ApiMessage[] = messages
-    .filter((m) => !m.excluded)
-    .map((m) => ({ role: m.role, content: m.content }))
+function messageToApiMessage(m: ChatMessage): ApiMessage {
+  if (!m.files || m.files.length === 0) {
+    return { role: m.role, content: m.content }
+  }
+  const parts: ContentPart[] = [{ type: 'text', text: m.content }]
+  for (const f of m.files) {
+    if (f.type === 'image') {
+      parts.push({ type: 'image_url', image_url: { url: f.content, detail: 'low' } })
+    } else {
+      parts.push({ type: 'text', text: `[上传文件: ${f.name}]\n\`\`\`\n${f.content.slice(0, 3000)}\n\`\`\`` })
+    }
+  }
+  return { role: m.role, content: parts }
+}
 
-  if (uploadedFiles.length === 0) {
+export function buildApiMessages(
+  messages: ChatMessage[],
+  userText: string,
+  currentFiles: { name: string; content: string; type: string }[],
+): ApiMessage[] {
+  const history = messages.filter((m) => !m.excluded).map(messageToApiMessage)
+
+  if (currentFiles.length === 0) {
     return [...history, { role: 'user', content: userText }]
   }
 
   const parts: ContentPart[] = [{ type: 'text', text: userText }]
-  for (const f of uploadedFiles) {
+  for (const f of currentFiles) {
     if (f.type === 'image') {
       parts.push({ type: 'image_url', image_url: { url: f.content, detail: 'low' } })
     } else {

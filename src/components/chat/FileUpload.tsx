@@ -1,47 +1,41 @@
 import { useRef } from 'react'
-import { useChatStore } from '../../store/chatStore'
-import { readFileAsText, readFileAsDataUrl } from '../../utils/fileUtils'
 
-export function FileUpload() {
+export interface FileItem {
+  id: string
+  file: File
+}
+
+interface FileUploadProps {
+  files: FileItem[]
+  onAdd: (fileList: FileList) => void
+  onRemove: (id: string) => void
+}
+
+export function FileUpload({ files, onAdd, onRemove }: FileUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { uploadedFiles, addFile, removeFile } = useChatStore()
-
-  const handleFile = async (file: File) => {
-    try {
-      if (file.type.startsWith('image/')) {
-        const dataUrl = await readFileAsDataUrl(file)
-        addFile({ name: file.name, content: dataUrl, type: 'image' })
-      } else {
-        const text = await readFileAsText(file)
-        addFile({ name: file.name, content: text, type: 'text' })
-      }
-    } catch {
-      // ignore read errors
-    }
-  }
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
-    const file = e.dataTransfer.files[0]
-    if (file) handleFile(file)
+    const fileList = e.dataTransfer.files
+    if (fileList.length > 0) onAdd(fileList)
   }
 
   return (
-    <div className="border-t border-gray-200 px-3 py-2">
+    <div className="px-3 py-1">
       <div
         className="flex flex-wrap gap-1"
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
       >
-        {uploadedFiles.map((f, i) => (
+        {files.map((f) => (
           <span
-            key={i}
+            key={f.id}
             className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded text-xs text-gray-600"
           >
-            {f.type === 'image' ? '🖼️' : '📄'} {f.name}
+            {f.file.type.startsWith('image/') ? '🖼️' : '📄'} {f.file.name}
             <button
               className="text-gray-400 hover:text-red-500"
-              onClick={() => removeFile(i)}
+              onClick={() => onRemove(f.id)}
             >
               ×
             </button>
@@ -59,8 +53,8 @@ export function FileUpload() {
           accept=".txt,.md,.json,.png,.jpg,.jpeg,.webp"
           className="hidden"
           onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) handleFile(file)
+            const fileList = e.target.files
+            if (fileList && fileList.length > 0) onAdd(fileList)
             e.target.value = ''
           }}
         />

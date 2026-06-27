@@ -8,9 +8,30 @@ import {
   buildApiMessages,
   buildRefineSystemPrompt,
 } from '../../utils/charaUtils'
+import { readFileAsText, readFileAsDataUrl } from '../../utils/fileUtils'
 import { useGenerateCard } from './useGenerateCard'
+import type { FileItem } from './FileUpload'
 
-export function ChatInput() {
+interface ChatInputProps {
+  files: FileItem[]
+  onSendComplete: () => void
+}
+
+async function readFiles(files: FileItem[]) {
+  const result: { name: string; content: string; type: string }[] = []
+  for (const f of files) {
+    if (f.file.type.startsWith('image/')) {
+      const dataUrl = await readFileAsDataUrl(f.file)
+      result.push({ name: f.file.name, content: dataUrl, type: 'image' })
+    } else {
+      const text = await readFileAsText(f.file)
+      result.push({ name: f.file.name, content: text, type: 'text' })
+    }
+  }
+  return result
+}
+
+export function ChatInput({ files, onSendComplete }: ChatInputProps) {
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
   const addMessage = useChatStore((s) => s.addMessage)
@@ -21,7 +42,6 @@ export function ChatInput() {
   const apiConfig = useChatStore((s) => s.apiConfig)
   const brainstormPrompt = useChatStore((s) => s.brainstormPrompt)
   const refinePrompt = useChatStore((s) => s.refinePrompt)
-  const uploadedFiles = useChatStore((s) => s.uploadedFiles)
   const pendingRegenerate = useChatStore((s) => s.pendingRegenerate)
   const setPendingRegenerate = useChatStore((s) => s.setPendingRegenerate)
   const card = useCharaStore((s) => s.card)
@@ -32,9 +52,12 @@ export function ChatInput() {
 
   const doSend = useCallback(async (content: string) => {
     setLoading(true)
-    addMessage({ role: 'user', content })
 
-    const apiMsg = buildApiMessages(messages, content, uploadedFiles)
+    const fileData = await readFiles(files)
+    addMessage({ role: 'user', content, files: fileData })
+    onSendComplete()
+
+    const apiMsg = buildApiMessages(messages, content, [])
     const systemPrompt =
       mode === 'brainstorm'
         ? brainstormPrompt
@@ -75,19 +98,21 @@ export function ChatInput() {
     } finally {
       setLoading(false)
     }
-  }, [messages, mode, apiConfig, brainstormPrompt, refinePrompt, uploadedFiles, card, addMessage, setCard, setMode, executeActions])
+  }, [messages, mode, apiConfig, brainstormPrompt, refinePrompt, card, files, addMessage, setCard, setMode, executeActions, onSendComplete])
 
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     const trimmed = text.trim()
     if (!trimmed || loading) return
     setText('')
     if (mode === 'brainstorm' && trimmed.includes('生成')) {
-      addMessage({ role: 'user', content: trimmed })
-      generateCard()
+      const fileData = await readFiles(files)
+      addMessage({ role: 'user', content: trimmed, files: fileData })
+      onSendComplete()
+      generateCard([])
       return
     }
     doSend(trimmed)
-  }, [text, loading, mode, doSend, addMessage, generateCard])
+  }, [text, loading, mode, doSend, addMessage, generateCard, files, onSendComplete])
 
   useEffect(() => {
     if (pendingRegenerate && !loading) {

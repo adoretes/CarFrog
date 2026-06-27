@@ -27,6 +27,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   excluded?: boolean
+  files?: { name: string; content: string; type: string }[]
 }
 
 export interface ContentPart {

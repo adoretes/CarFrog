@@ -12,7 +12,7 @@ export function GenerateButton() {
           ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
           : 'bg-indigo-600 text-white hover:bg-indigo-700'
       }`}
-      onClick={generate}
+      onClick={() => generate()}
       disabled={loading}
     >
       {loading ? '⏳ 生成中...' : '✨ 生成角色卡'}
