@@ -174,7 +174,30 @@ export function ChatMessages() {
                   }`}
                 >
                   {msg.role === 'user' ? (
-                    <span className="whitespace-pre-wrap">{msg.content}</span>
+                    <>
+                      <span className="whitespace-pre-wrap">{msg.content}</span>
+                      {msg.files && msg.files.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {msg.files.map((f, fi) =>
+                            f.type === 'image' ? (
+                              <img
+                                key={fi}
+                                src={f.content}
+                                alt={f.name}
+                                className="max-w-full max-h-64 rounded-lg border border-gray-200"
+                              />
+                            ) : (
+                              <div
+                                key={fi}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-200 rounded text-xs text-gray-600"
+                              >
+                                📄 {f.name}
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <>
                       {msg.content.includes('<actions>') ? (
