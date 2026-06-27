@@ -1,43 +1,70 @@
 # CarFrog 🐸
 
-**SillyTavern 角色卡生成器** — 基于 React + TypeScript + Vite 的 Web 工具，用于创建、编辑和导出 SillyTavern V2 角色卡。
+> **纯对话 AI 辅助角色卡创作工具**
+>
+> 不用填表单，不用记规范。像聊天一样，从灵感到完整的 SillyTavern V2 角色卡。
+
+---
+
+## 核心理念
+
+角色创作本应是创意过程，而不是填表练习。
+
+**CarFrog** 让你通过自然语言对话与 AI 协作完成角色卡创作，把注意力放回角色本身，而非技术细节。
+
+---
+
+## 工作流
+
+```
+💬 头脑风暴  →  ✨ 生成角色卡  →  🔧 精修完善
+```
+
+| 阶段 | 做什么 |
+|------|--------|
+| **头脑风暴** | 和 AI 自由讨论角色设定，AI 引导但不输出 JSON，避免过早陷入技术细节 |
+| **生成角色卡** | 点击「✨ 生成角色卡」，AI 一次性输出完整的 SillyTavern V2 规范 JSON |
+| **精修完善** | 继续对话提出修改要求，AI 通过 `<actions>` 指令精确修改字段，无需重新整张生成 |
+
+---
 
 ## 功能
 
-- **角色卡编辑** — 编辑名称、描述、性格、场景、开场白、示例对话等
-- **世界书编辑器** — 嵌入 Lorebook / World Info 条目
-- **对话预览** — 与角色进行模拟对话，测试角色表现
-- **PNG 导出** — 将角色数据嵌入 PNG（符合 SillyTavern PNG 元数据规范）
-- **JSON 导入/导出** — 支持纯 JSON 文件导入导出
-- **AI 对话** — 可选接入 AI 接口进行对话生成
+- **纯对话驱动** — 全程自然语言交互，无需手动编辑 JSON
+- **SillyTavern V2 原生兼容** — 完全遵循 `chara_card_v2` 规范，支持世界书（World Book）
+- **PNG 角色卡** — 将角色卡数据嵌入 PNG 图片，与 SillyTavern 社区生态无缝对接
+- **可视化卡片预览** — 所见即所得的卡片展示
+- **零后端架构** — 纯前端应用，直接调用 OpenAI 兼容 API，数据完全在本地
+- **流式对话** — SSE 流式输出，实时响应
+- **可编辑提示词** — 三阶段的 system prompt 均可自定义
+- **移动端适配** — 手机端底部 Tab 切换，随时随地进行创作
 
-## 技术栈
+---
 
-| 工具 | 用途 |
-|------|------|
-| React 19 | UI 框架 |
-| TypeScript | 类型检查 |
-| Vite 6 | 构建工具 |
-| Tailwind CSS 3 | 样式 |
-| Zustand 5 | 状态管理 |
-| react-markdown | Markdown 渲染 |
-
-## 本地开发
+## 快速开始
 
 ```bash
 npm install
 npm run dev
 ```
 
-## 构建
+1. 打开浏览器访问 `http://localhost:5173`
+2. 在左侧配置 API Base URL、API Key 和 Model
+3. 开始和 AI 聊天，描述你想创作的角色
+4. 讨论差不多时点击「✨ 生成角色卡」
+5. 继续对话精修，或直接在右侧面板手动调整
+
+## 构建部署
 
 ```bash
 npm run build
-npm run preview
 ```
 
-构建产物输出到 `dist/` 目录。
+产物在 `dist/` 目录，可静态部署到任何 Web 服务器。
 
-## 部署
+---
 
-推送到 `main` 分支会自动触发 GitHub Actions 构建并部署到 GitHub Pages。
+## 技术栈
+
+React 19 + TypeScript 5.7 + Vite 6 + Tailwind CSS 3.4 + Zustand 5
+
