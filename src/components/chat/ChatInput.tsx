@@ -79,6 +79,10 @@ export function ChatInput({ files, onSendComplete }: ChatInputProps) {
       if (mode === 'brainstorm') {
         const parsedCard = parseJsonFromText(fullContent)
         if (parsedCard) {
+          const existingWb = card.data.character_book
+          if (existingWb?.entries.length && !parsedCard.data.character_book?.entries.length) {
+            parsedCard.data.character_book = existingWb
+          }
           setCard(parsedCard)
           excludePreviousMessages()
           addMessage({ role: 'assistant', content: '✅ 已识别角色卡数据，头脑风暴阶段的对话已折叠（不再参与精修上下文），自动切换到精修模式。' })

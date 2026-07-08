@@ -1,6 +1,7 @@
 import type { CharaAction, ApiMessage, ContentPart, ChatMessage } from '../types/actions'
 import type { CharaCard } from '../types'
 import { createEmptyCharaCard } from '../types'
+import { entriesToArray } from './wbUtils'
 
 export function ensureCharaCard(raw: Partial<CharaCard>): CharaCard {
   const d = createEmptyCharaCard()
@@ -23,7 +24,7 @@ export function ensureCharaCard(raw: Partial<CharaCard>): CharaCard {
   if (raw.data?.character_book) {
     data.character_book = {
       name: raw.data.character_book.name ?? null,
-      entries: Array.isArray(raw.data.character_book.entries) ? raw.data.character_book.entries : [],
+      entries: entriesToArray(raw.data.character_book.entries),
       extensions: raw.data.character_book.extensions ?? {},
     }
   }

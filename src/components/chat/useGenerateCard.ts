@@ -42,6 +42,10 @@ export function useGenerateCard() {
 
       const card = parseJsonFromText(fullContent)
       if (card) {
+        const existingWb = useCharaStore.getState().card.data.character_book
+        if (existingWb?.entries.length && !card.data.character_book?.entries.length) {
+          card.data.character_book = existingWb
+        }
         setCard(card)
         excludePreviousMessages()
         addMessage({ role: 'assistant', content: '✅ 角色卡已生成！头脑风暴阶段的对话已折叠，不再参与精修上下文（精修时会自动注入当前角色卡数据）。' })
