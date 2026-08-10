@@ -12,6 +12,8 @@ interface UiState {
   setShowPromptConfig: (show: boolean) => void
   mobileView: MobileView
   setMobileView: (view: MobileView) => void
+  sessionListOpen: boolean
+  setSessionListOpen: (open: boolean) => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -23,4 +25,6 @@ export const useUiStore = create<UiState>((set) => ({
   setShowPromptConfig: (showPromptConfig) => set({ showPromptConfig }),
   mobileView: 'chat',
   setMobileView: (mobileView) => set({ mobileView }),
+  sessionListOpen: false,
+  setSessionListOpen: (sessionListOpen) => set({ sessionListOpen }),
 }))

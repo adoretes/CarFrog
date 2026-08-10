@@ -77,10 +77,8 @@ export const useChatStore = create<ChatState>()(
         }),
     }),
     {
-      name: 'carfrog-chat',
+      name: 'carfrog-settings',
       partialize: (state) => ({
-        messages: state.messages,
-        mode: state.mode,
         apiConfig: state.apiConfig,
         brainstormPrompt: state.brainstormPrompt,
         generatePrompt: state.generatePrompt,

@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 import { createEmptyCharaCard, type CharaCard, type WorldBook } from '../types'
 import type { CharaAction } from '../types/actions'
 import { ensureCharaCard } from '../utils/charaUtils'
@@ -115,9 +114,7 @@ interface CharaState {
   setAvatar: (dataUrl: string | null) => void
 }
 
-export const useCharaStore = create<CharaState>()(
-  persist(
-    (set) => ({
+export const useCharaStore = create<CharaState>((set) => ({
       card: createEmptyCharaCard(),
       avatar: null,
 
@@ -168,10 +165,5 @@ export const useCharaStore = create<CharaState>()(
       },
 
       resetCard: () => set({ card: createEmptyCharaCard(), avatar: null }),
-    }),
-    {
-      name: 'carfrog-chara',
-      partialize: (state) => ({ card: state.card, avatar: state.avatar }),
-    },
-  ),
+    })
 )
