@@ -16,7 +16,7 @@ import type { SessionData, SessionMeta } from '../types/session'
 
 const ACTIVE_KEY = 'carfrog-active-session'
 const SAVE_DEBOUNCE_MS = 250
-const TITLE_MAX_LEN = 30
+export const TITLE_MAX_LEN = 30
 
 interface SessionState {
   sessions: SessionMeta[]
@@ -27,6 +27,7 @@ interface SessionState {
   switchSession: (id: string) => Promise<void>
   renameSession: (id: string, title: string) => Promise<void>
   deleteSession: (id: string) => Promise<void>
+  clearSessions: () => Promise<void>
 }
 
 function emptySessionData(): SessionData {
@@ -58,6 +59,7 @@ function resetActiveStores(): void {
 }
 
 let saveTimer: number | undefined
+let switchToken = 0
 
 async function persistActive(): Promise<void> {
   const { activeId, sessions, hydrated } = useSessionStore.getState()
@@ -184,15 +186,17 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   switchSession: async (id) => {
     const { activeId, sessions } = get()
     if (id === activeId || !sessions.some((m) => m.id === id)) return
+    const token = ++switchToken
     await flushSave()
     const data = await getSessionData(id)
+    if (token !== switchToken) return
     applySessionToStores(data ?? emptySessionData())
     set({ activeId: id })
     localStorage.setItem(ACTIVE_KEY, id)
   },
 
   renameSession: async (id, title) => {
-    const trimmed = title.trim()
+    const trimmed = title.trim().slice(0, TITLE_MAX_LEN)
     const sessions = get().sessions.map((m) =>
       m.id === id ? { ...m, title: trimmed } : m,
     )
@@ -204,18 +208,17 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   deleteSession: async (id) => {
+    ++switchToken
     await flushSave()
     await deleteSessionRecord(id)
     const sessions = get().sessions.filter((m) => m.id !== id)
+    set({ sessions })
 
-    if (get().activeId !== id) {
-      set({ sessions })
-      return
-    }
+    if (get().activeId !== id) return
 
     let activeId: string
     if (sessions.length > 0) {
-      activeId = sessions[0].id
+      activeId = [...sessions].sort((a, b) => b.updatedAt - a.updatedAt)[0].id
       const data = await getSessionData(activeId)
       applySessionToStores(data ?? emptySessionData())
     } else {
@@ -230,5 +233,20 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
     set({ sessions, activeId })
     localStorage.setItem(ACTIVE_KEY, activeId)
+  },
+
+  clearSessions: async () => {
+    ++switchToken
+    await flushSave()
+    const oldIds = get().sessions.map((s) => s.id)
+    await Promise.all(oldIds.map((id) => deleteSessionRecord(id)))
+    const id = generateId()
+    const now = Date.now()
+    const meta: SessionMeta = { id, title: '', createdAt: now, updatedAt: now }
+    await putMeta(meta)
+    await putSessionData(id, emptySessionData())
+    resetActiveStores()
+    set({ sessions: [meta], activeId: id })
+    localStorage.setItem(ACTIVE_KEY, id)
   },
 }))

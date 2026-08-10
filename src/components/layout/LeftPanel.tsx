@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { ChatMessages } from '../chat/ChatMessages'
 import { ChatInput } from '../chat/ChatInput'
 import { PromptConfig } from '../chat/PromptConfig'
@@ -12,10 +12,15 @@ let fileIdCounter = 0
 
 export function LeftPanel() {
   const mode = useChatStore((s) => s.mode)
+  const activeId = useSessionStore((s) => s.activeId)
   const activeTitle = useSessionStore((s) =>
     s.sessions.find((m) => m.id === s.activeId)?.title ?? '',
   )
   const [fileItems, setFileItems] = useState<FileItem[]>([])
+
+  useEffect(() => {
+    setFileItems([])
+  }, [activeId])
 
   const handleAddFile = useCallback((fileList: FileList) => {
     const file = fileList[0]
