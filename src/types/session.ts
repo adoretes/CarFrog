@@ -1,4 +1,4 @@
-import type { ChatMessage, ChatMode } from './actions'
+import type { ChatMessage, ChatMode, PendingRegenerate } from './actions'
 import type { CharaCard } from './charaCard'
 
 export interface SessionMeta {
@@ -13,5 +13,5 @@ export interface SessionData {
   mode: ChatMode
   card: CharaCard
   avatar: string | null
-  pendingRegenerate: string | null
+  pendingRegenerate: PendingRegenerate | null
 }

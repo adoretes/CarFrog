@@ -115,9 +115,9 @@ export function ChatMessages() {
     }
     if (lastUserIndex === -1) return
 
-    const userContent = messages[lastUserIndex].content
+    const userMsg = messages[lastUserIndex]
     setMessages(messages.slice(0, lastUserIndex))
-    setPendingRegenerate(userContent)
+    setPendingRegenerate({ content: userMsg.content, files: userMsg.files ?? [] })
   }
 
   return (

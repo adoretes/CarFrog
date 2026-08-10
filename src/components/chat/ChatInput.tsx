@@ -11,6 +11,7 @@ import {
 import { readFileAsText, readFileAsDataUrl } from '../../utils/fileUtils'
 import { useGenerateCard } from './useGenerateCard'
 import type { FileItem } from './FileUpload'
+import type { UploadedFile } from '../../types/actions'
 
 interface ChatInputProps {
   files: FileItem[]
@@ -50,14 +51,14 @@ export function ChatInput({ files, onSendComplete }: ChatInputProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const { generate: generateCard } = useGenerateCard()
 
-  const doSend = useCallback(async (content: string) => {
+  const doSend = useCallback(async (content: string, regenerateFiles?: UploadedFile[]) => {
     setLoading(true)
 
-    const fileData = await readFiles(files)
+    const fileData = regenerateFiles ?? (await readFiles(files))
     addMessage({ role: 'user', content, files: fileData })
     onSendComplete()
 
-    const apiMsg = buildApiMessages(messages, content, [])
+    const apiMsg = buildApiMessages(messages, content, fileData)
     const systemPrompt =
       mode === 'brainstorm'
         ? brainstormPrompt
@@ -120,9 +121,9 @@ export function ChatInput({ files, onSendComplete }: ChatInputProps) {
 
   useEffect(() => {
     if (pendingRegenerate && !loading) {
-      const text = pendingRegenerate
+      const data = pendingRegenerate
       setPendingRegenerate(null)
-      doSend(text)
+      doSend(data.content, data.files)
     }
   }, [pendingRegenerate, loading, doSend, setPendingRegenerate])
 

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { ChatMessage, ChatMode, ApiConfig } from '../types/actions'
+import type { ChatMessage, ChatMode, ApiConfig, PendingRegenerate } from '../types/actions'
 import {
   DEFAULT_BRAINSTORM_PROMPT,
   DEFAULT_GENERATE_PROMPT,
@@ -14,7 +14,7 @@ interface ChatState {
   brainstormPrompt: string
   generatePrompt: string
   refinePrompt: string
-  pendingRegenerate: string | null
+  pendingRegenerate: PendingRegenerate | null
   addMessage: (msg: ChatMessage) => void
   setMessages: (msgs: ChatMessage[]) => void
   removeMessage: (index: number) => void
@@ -24,7 +24,7 @@ interface ChatState {
   setBrainstormPrompt: (prompt: string) => void
   setGeneratePrompt: (prompt: string) => void
   setRefinePrompt: (prompt: string) => void
-  setPendingRegenerate: (text: string | null) => void
+  setPendingRegenerate: (data: PendingRegenerate | null) => void
   resetChat: () => void
 }
 

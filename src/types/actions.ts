@@ -23,11 +23,22 @@ export type CharaAction = SetAction | AddAction | RemoveAction
 
 export type ChatMode = 'brainstorm' | 'generating' | 'refine'
 
+export interface UploadedFile {
+  name: string
+  content: string
+  type: string
+}
+
+export interface PendingRegenerate {
+  content: string
+  files: UploadedFile[]
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   excluded?: boolean
-  files?: { name: string; content: string; type: string }[]
+  files?: UploadedFile[]
 }
 
 export interface ContentPart {
