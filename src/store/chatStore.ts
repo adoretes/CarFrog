@@ -55,7 +55,9 @@ export const useChatStore = create<ChatState>()(
 
       excludePreviousMessages: () =>
         set((state) => ({
-          messages: state.messages.map((m) => ({ ...m, excluded: true })),
+          messages: state.messages.map((m, i) =>
+            i === state.messages.length - 1 ? m : { ...m, excluded: true },
+          ),
         })),
 
       setMode: (mode) => set({ mode }),

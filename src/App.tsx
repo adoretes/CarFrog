@@ -10,7 +10,6 @@ export default function App() {
   const createSession = useSessionStore((s) => s.createSession)
   const mobileView = useUiStore((s) => s.mobileView)
   const setMobileView = useUiStore((s) => s.setMobileView)
-  const setSessionListOpen = useUiStore((s) => s.setSessionListOpen)
 
   if (!hydrated) {
     return (
@@ -28,14 +27,6 @@ export default function App() {
     <div className="h-full flex flex-col">
       <header className="flex items-center justify-between px-3 sm:px-4 py-2 bg-white border-b border-gray-200 shadow-sm">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <button
-            className="p-2 -ml-1 text-gray-500 hover:text-gray-700 rounded-lg transition-colors"
-            onClick={() => setSessionListOpen(true)}
-            title="会话列表"
-            aria-label="打开会话列表"
-          >
-            ☰
-          </button>
           <img src="/icons/carfrog-icon-64.png" alt="" className="h-8 w-8 rounded-lg" />
           <h1 className="text-base sm:text-lg font-bold text-indigo-700 whitespace-nowrap">CarFrog</h1>
           <span className="hidden sm:inline text-xs text-gray-400">角色卡生成器</span>
