@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useCharaStore } from '../../store/charaStore'
 import { useChatStore } from '../../store/chatStore'
+import { useSessionStore } from '../../store/sessionStore'
 import { EntryEditor } from './EntryEditor'
 import { createDefaultWorldBookEntry } from '../../types'
 import { parseWorldBookJson } from '../../utils/wbUtils'
@@ -14,6 +15,7 @@ export function WorldBookPanel() {
   const [importModal, setImportModal] = useState<{
     wb: WorldBook
     source: string
+    sessionId: string | null
   } | null>(null)
 
   const addEntry = () => {
@@ -33,15 +35,18 @@ export function WorldBookPanel() {
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    const sessionId = useSessionStore.getState().activeId
     try {
       const text = await file.text()
+      if (useSessionStore.getState().activeId !== sessionId) return
       const result = parseWorldBookJson(text)
       if ('error' in result) {
         addMessage({ role: 'assistant', content: `❌ 世界书导入失败：${result.error}` })
       } else {
-        setImportModal(result)
+        setImportModal({ wb: result.wb, source: result.source ?? '文件', sessionId })
       }
     } catch {
+      if (useSessionStore.getState().activeId !== sessionId) return
       addMessage({ role: 'assistant', content: '❌ 文件读取失败' })
     }
     e.target.value = ''
@@ -49,6 +54,10 @@ export function WorldBookPanel() {
 
   const doImport = (mode: 'replace' | 'append') => {
     if (!importModal) return
+    if (useSessionStore.getState().activeId !== importModal.sessionId) {
+      setImportModal(null)
+      return
+    }
     const imported = importModal.wb
     if (mode === 'replace') {
       setField('data.character_book', imported)

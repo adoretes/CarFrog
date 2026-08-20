@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useChatStore } from '../../store/chatStore'
 import { useCharaStore } from '../../store/charaStore'
+import { useSessionStore } from '../../store/sessionStore'
 import { sendChatMessage } from '../../api/aiChat'
 import {
   parseActionsFromText,
@@ -52,9 +53,14 @@ export function ChatInput({ files, onSendComplete }: ChatInputProps) {
   const { generate: generateCard } = useGenerateCard()
 
   const doSend = useCallback(async (content: string, regenerateFiles?: UploadedFile[]) => {
+    const sessionId = useSessionStore.getState().activeId
     setLoading(true)
 
     const fileData = regenerateFiles ?? (await readFiles(files))
+    if (useSessionStore.getState().activeId !== sessionId) {
+      setLoading(false)
+      return
+    }
     addMessage({ role: 'user', content, files: fileData })
     onSendComplete()
 
@@ -74,6 +80,8 @@ export function ChatInput({ files, onSendComplete }: ChatInputProps) {
           currentContent = chunk
         },
       )
+
+      if (useSessionStore.getState().activeId !== sessionId) return
 
       addMessage({ role: 'assistant', content: fullContent })
 
@@ -96,6 +104,7 @@ export function ChatInput({ files, onSendComplete }: ChatInputProps) {
         }
       }
     } catch (err) {
+      if (useSessionStore.getState().activeId !== sessionId) return
       addMessage({
         role: 'assistant',
         content: `❌ 请求失败：${err instanceof Error ? err.message : '未知错误'}`,
@@ -110,7 +119,9 @@ export function ChatInput({ files, onSendComplete }: ChatInputProps) {
     if (!trimmed || loading) return
     setText('')
     if (mode === 'brainstorm' && trimmed.includes('生成')) {
+      const sessionId = useSessionStore.getState().activeId
       const fileData = await readFiles(files)
+      if (useSessionStore.getState().activeId !== sessionId) return
       addMessage({ role: 'user', content: trimmed, files: fileData })
       onSendComplete()
       generateCard([])

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useChatStore } from '../../store/chatStore'
 import { useCharaStore } from '../../store/charaStore'
+import { useSessionStore } from '../../store/sessionStore'
 import { sendChatMessageNonStream } from '../../api/aiChat'
 import { parseJsonFromText, buildApiMessages } from '../../utils/charaUtils'
 
@@ -22,6 +23,7 @@ export function useGenerateCard() {
 
     setLoading(true)
     setMode('generating')
+    const sessionId = useSessionStore.getState().activeId
 
     const generateMsg = buildApiMessages(messages, '请根据我们的讨论，生成完整的角色卡 JSON 和世界书条目。', currentFiles)
 
@@ -37,6 +39,8 @@ export function useGenerateCard() {
         systemPrompt,
         apiConfig,
       )
+
+      if (useSessionStore.getState().activeId !== sessionId) return
 
       addMessage({ role: 'assistant', content: fullContent })
 
@@ -55,6 +59,7 @@ export function useGenerateCard() {
         setMode('brainstorm')
       }
     } catch (err) {
+      if (useSessionStore.getState().activeId !== sessionId) return
       addMessage({
         role: 'assistant',
         content: `❌ 生成失败：${err instanceof Error ? err.message : '未知错误'}`,
