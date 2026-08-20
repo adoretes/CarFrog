@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { useCharaStore } from '../../store/charaStore'
 import { useChatStore } from '../../store/chatStore'
+import { useSessionStore } from '../../store/sessionStore'
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -22,11 +23,14 @@ export function AvatarButton() {
   const handleAvatarImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    const sessionId = useSessionStore.getState().activeId
     try {
       const dataUrl = await fileToDataUrl(file)
+      if (useSessionStore.getState().activeId !== sessionId) return
       setAvatar(dataUrl)
       addMessage({ role: 'assistant', content: `✅ 已导入头像：${file.name}` })
     } catch {
+      if (useSessionStore.getState().activeId !== sessionId) return
       addMessage({ role: 'assistant', content: '❌ 头像导入失败' })
     }
     e.target.value = ''

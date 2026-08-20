@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useCharaStore } from '../../store/charaStore'
 import { useChatStore } from '../../store/chatStore'
+import { useSessionStore } from '../../store/sessionStore'
 import { downloadJson } from '../../utils/fileUtils'
 import { exportAsPng, importFromPng } from './PngExport'
 
@@ -38,8 +39,10 @@ export function ExportButton() {
   const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    const sessionId = useSessionStore.getState().activeId
     try {
       const text = await file.text()
+      if (useSessionStore.getState().activeId !== sessionId) return
       const parsed = JSON.parse(text)
       if (parsed?.spec && parsed?.data) {
         resetChat()
@@ -51,6 +54,7 @@ export function ExportButton() {
         addMessage({ role: 'assistant', content: '❌ 无效的角色卡 JSON 格式' })
       }
     } catch {
+      if (useSessionStore.getState().activeId !== sessionId) return
       addMessage({ role: 'assistant', content: '❌ 文件解析失败' })
     }
     e.target.value = ''
@@ -59,9 +63,11 @@ export function ExportButton() {
   const handlePngExport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    const sessionId = useSessionStore.getState().activeId
     try {
       await exportAsPng(card, file)
     } catch (err) {
+      if (useSessionStore.getState().activeId !== sessionId) return
       addMessage({ role: 'assistant', content: `❌ PNG 导出失败：${err}` })
     }
     e.target.value = ''
@@ -69,10 +75,12 @@ export function ExportButton() {
 
   const handleExportPngWithCurrentAvatar = async () => {
     if (!avatar) return
+    const sessionId = useSessionStore.getState().activeId
     try {
       const file = await dataUrlToFile(avatar, 'avatar.png')
       await exportAsPng(card, file)
     } catch (err) {
+      if (useSessionStore.getState().activeId !== sessionId) return
       addMessage({ role: 'assistant', content: `❌ PNG 导出失败：${err}` })
     }
   }
@@ -80,12 +88,15 @@ export function ExportButton() {
   const handlePngImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    const sessionId = useSessionStore.getState().activeId
     const imported = await importFromPng(file)
+    if (useSessionStore.getState().activeId !== sessionId) return
     if (imported) {
       resetChat()
       setCard(imported)
       try {
         const dataUrl = await fileToDataUrl(file)
+        if (useSessionStore.getState().activeId !== sessionId) return
         setAvatar(dataUrl)
       } catch {
         // 头像设置失败不影响角色卡导入
