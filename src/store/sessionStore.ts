@@ -40,8 +40,12 @@ function emptySessionData(): SessionData {
   }
 }
 
+let suppressSave = false
+let dirty = false
+
 function applySessionToStores(data: SessionData): void {
   const mode = data.mode === 'generating' ? 'brainstorm' : data.mode
+  suppressSave = true
   useChatStore.setState({
     messages: data.messages,
     mode,
@@ -51,11 +55,14 @@ function applySessionToStores(data: SessionData): void {
     card: ensureCharaCard(data.card),
     avatar: data.avatar,
   })
+  suppressSave = false
 }
 
 function resetActiveStores(): void {
+  suppressSave = true
   useChatStore.getState().resetChat()
   useCharaStore.getState().resetCard()
+  suppressSave = false
 }
 
 let saveTimer: number | undefined
@@ -70,6 +77,8 @@ async function persistActive(): Promise<void> {
   const chat = useChatStore.getState()
   const chara = useCharaStore.getState()
   const now = Date.now()
+  const wasDirty = dirty
+  dirty = false
 
   const firstUser = chat.messages.find((m) => m.role === 'user')
   const title = meta.title
@@ -78,7 +87,9 @@ async function persistActive(): Promise<void> {
       ? firstUser.content.replace(/\s+/g, ' ').trim().slice(0, TITLE_MAX_LEN)
       : ''
 
-  const newMeta: SessionMeta = { ...meta, title, updatedAt: now }
+  const newMeta: SessionMeta = wasDirty
+    ? { ...meta, title, updatedAt: now }
+    : { ...meta, title }
   if (newMeta.title !== meta.title || newMeta.updatedAt !== meta.updatedAt) {
     useSessionStore.setState((state) => ({
       sessions: state.sessions.map((m) => (m.id === activeId ? newMeta : m)),
@@ -118,6 +129,7 @@ export function flushSave(): Promise<void> {
 }
 
 useChatStore.subscribe((state, prev) => {
+  if (suppressSave) return
   if (
     state.messages === prev.messages &&
     state.mode === prev.mode &&
@@ -125,11 +137,14 @@ useChatStore.subscribe((state, prev) => {
   ) {
     return
   }
+  dirty = true
   scheduleSave()
 })
 
 useCharaStore.subscribe((state, prev) => {
+  if (suppressSave) return
   if (state.card === prev.card && state.avatar === prev.avatar) return
+  dirty = true
   scheduleSave()
 })
 
