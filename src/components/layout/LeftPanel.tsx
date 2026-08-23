@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { ChatMessages } from '../chat/ChatMessages'
 import { ChatInput } from '../chat/ChatInput'
 import { PromptConfig } from '../chat/PromptConfig'
@@ -20,9 +20,12 @@ export function LeftPanel() {
   )
   const [fileItems, setFileItems] = useState<FileItem[]>([])
 
-  useEffect(() => {
+  // 会话切换时清空附件列表：在渲染期间检测外部 id 变化并重置本地状态
+  const [prevActiveId, setPrevActiveId] = useState(activeId)
+  if (prevActiveId !== activeId) {
+    setPrevActiveId(activeId)
     setFileItems([])
-  }, [activeId])
+  }
 
   const handleAddFile = useCallback((fileList: FileList) => {
     const file = fileList[0]

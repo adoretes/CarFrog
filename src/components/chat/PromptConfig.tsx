@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react'
 import { fetchModels } from '../../api/aiChat'
 import { useChatStore } from '../../store/chatStore'
 import { useUiStore } from '../../store/uiStore'
-import { useChatStore as useChatMode } from '../../store/chatStore'
 import {
   DEFAULT_BRAINSTORM_PROMPT,
   DEFAULT_GENERATE_PROMPT,
@@ -20,7 +19,6 @@ export function PromptConfig() {
   const setBrainstormPrompt = useChatStore((s) => s.setBrainstormPrompt)
   const setGeneratePrompt = useChatStore((s) => s.setGeneratePrompt)
   const setRefinePrompt = useChatStore((s) => s.setRefinePrompt)
-  const currentMode = useChatMode((s) => s.mode)
   const [promptTab, setPromptTab] = useState<PromptTab>('brainstorm')
   const [models, setModels] = useState<string[]>([])
   const [modelLoading, setModelLoading] = useState(false)

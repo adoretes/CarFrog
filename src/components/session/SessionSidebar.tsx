@@ -38,9 +38,12 @@ function SessionListBody({ onNavigate }: { onNavigate?: () => void }) {
       : list
   }, [sessions, query])
 
-  useEffect(() => {
+  // 搜索词变化时重置分页：在渲染期间检测变化并重置，避免 effect 级联渲染
+  const [prevQuery, setPrevQuery] = useState('')
+  if (prevQuery !== query) {
+    setPrevQuery(query)
     setVisibleCount(PAGE_SIZE)
-  }, [query])
+  }
 
   const visible = filtered.slice(0, visibleCount)
 

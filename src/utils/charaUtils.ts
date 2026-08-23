@@ -50,7 +50,7 @@ export function parseActionsFromText(text: string): CharaAction[] {
 
   const raw = match[1].trim()
 
-  let parsed = tryParseJson(raw)
+  const parsed = tryParseJson(raw)
   if (Array.isArray(parsed)) return parsed as CharaAction[]
 
   const objRegex = /\{(?:[^{}]|(?:\{[^{}]*\}))*?\}/g

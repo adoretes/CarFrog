@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import type { WorldBookEntry } from '../../types'
-import { createDefaultWorldBookEntry } from '../../types'
 
 interface EntryEditorProps {
   entry: WorldBookEntry
