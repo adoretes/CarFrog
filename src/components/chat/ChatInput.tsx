@@ -3,6 +3,7 @@ import { useChatStore } from '../../store/chatStore'
 import { useCharaStore } from '../../store/charaStore'
 import { useSessionStore } from '../../store/sessionStore'
 import { sendChatMessage } from '../../api/aiChat'
+import { setActiveRequest, abortActiveRequest, isAbortError } from '../../api/requestControl'
 import {
   parseActionsFromText,
   parseJsonFromText,
@@ -18,6 +19,11 @@ interface ChatInputProps {
   files: FileItem[]
   onSendComplete: () => void
 }
+
+// 只匹配完整的生成指令短句，避免"这个角色能生成电力吗"这类长句误触发
+const GENERATE_COMMAND_RE = /^(请|帮我|麻烦)?生成(角色卡|卡片|角色)?$/
+
+const TEXTAREA_MAX_HEIGHT = 160
 
 async function readFiles(files: FileItem[]) {
   const result: { name: string; content: string; type: string }[] = []
@@ -37,6 +43,7 @@ export function ChatInput({ files, onSendComplete }: ChatInputProps) {
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
   const addMessage = useChatStore((s) => s.addMessage)
+  const updateStreamingMessage = useChatStore((s) => s.updateStreamingMessage)
   const messages = useChatStore((s) => s.messages)
   const mode = useChatStore((s) => s.mode)
   const setMode = useChatStore((s) => s.setMode)
@@ -49,8 +56,15 @@ export function ChatInput({ files, onSendComplete }: ChatInputProps) {
   const card = useCharaStore((s) => s.card)
   const setCard = useCharaStore((s) => s.setCard)
   const executeActions = useCharaStore((s) => s.executeActions)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const { generate: generateCard } = useGenerateCard()
+
+  const autoResize = useCallback(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, TEXTAREA_MAX_HEIGHT)}px`
+  }, [])
 
   const doSend = useCallback(async (content: string, regenerateFiles?: UploadedFile[]) => {
     const sessionId = useSessionStore.getState().activeId
@@ -70,20 +84,29 @@ export function ChatInput({ files, onSendComplete }: ChatInputProps) {
         ? brainstormPrompt
         : buildRefineSystemPrompt(card, refinePrompt)
 
+    const controller = new AbortController()
+    setActiveRequest(controller)
+    // 中止时 onChunk 已收到的内容会随 AbortError 一起丢失，用局部变量保留
+    let receivedContent = ''
+
     try {
-      let currentContent = ''
+      addMessage({ role: 'assistant', content: '', streaming: true })
       const fullContent = await sendChatMessage(
         apiMsg,
         systemPrompt,
         apiConfig,
         (chunk) => {
-          currentContent = chunk
+          receivedContent = chunk
+          // 流式中途切换会话时不写入新会话的消息列表
+          if (useSessionStore.getState().activeId === sessionId) {
+            useChatStore.getState().updateStreamingMessage(chunk)
+          }
         },
+        controller.signal,
       )
 
       if (useSessionStore.getState().activeId !== sessionId) return
-
-      addMessage({ role: 'assistant', content: fullContent })
+      updateStreamingMessage(fullContent, true)
 
       if (mode === 'brainstorm') {
         const parsedCard = parseJsonFromText(fullContent)
@@ -105,35 +128,41 @@ export function ChatInput({ files, onSendComplete }: ChatInputProps) {
       }
     } catch (err) {
       if (useSessionStore.getState().activeId !== sessionId) return
-      addMessage({
-        role: 'assistant',
-        content: `❌ 请求失败：${err instanceof Error ? err.message : '未知错误'}`,
-      })
+      if (isAbortError(err)) {
+        // 保留已流出的部分内容；内容可能是不完整的 JSON/actions，跳过后处理
+        updateStreamingMessage(receivedContent ? `${receivedContent}\n\n⏹ _（已停止生成）_` : '⏹ _（已停止生成）_', true)
+      } else {
+        updateStreamingMessage(`❌ 请求失败：${err instanceof Error ? err.message : '未知错误'}`, true)
+      }
     } finally {
+      setActiveRequest(null)
       setLoading(false)
     }
-  }, [messages, mode, apiConfig, brainstormPrompt, refinePrompt, card, files, addMessage, setCard, setMode, executeActions, onSendComplete])
+  }, [messages, mode, apiConfig, brainstormPrompt, refinePrompt, card, files, addMessage, updateStreamingMessage, excludePreviousMessages, setCard, setMode, executeActions, onSendComplete])
 
   const handleSend = useCallback(async () => {
     const trimmed = text.trim()
     if (!trimmed || loading) return
     setText('')
-    if (mode === 'brainstorm' && trimmed.includes('生成')) {
+    requestAnimationFrame(autoResize)
+    if (mode === 'brainstorm' && GENERATE_COMMAND_RE.test(trimmed)) {
       const sessionId = useSessionStore.getState().activeId
       const fileData = await readFiles(files)
       if (useSessionStore.getState().activeId !== sessionId) return
       addMessage({ role: 'user', content: trimmed, files: fileData })
       onSendComplete()
-      generateCard([])
+      generateCard(fileData)
       return
     }
     doSend(trimmed)
-  }, [text, loading, mode, doSend, addMessage, generateCard, files, onSendComplete])
+  }, [text, loading, mode, doSend, addMessage, generateCard, files, onSendComplete, autoResize])
 
   useEffect(() => {
     if (pendingRegenerate && !loading) {
       const data = pendingRegenerate
       setPendingRegenerate(null)
+      // 消费来自 ChatMessages 的"重新生成"事件（外部 store 触发的命令式调用）
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       doSend(data.content, data.files)
     }
   }, [pendingRegenerate, loading, doSend, setPendingRegenerate])
@@ -146,19 +175,23 @@ export function ChatInput({ files, onSendComplete }: ChatInputProps) {
 
   return (
     <div className="border-t border-gray-200 p-2 sm:p-3">
-      <div className="flex gap-2">
-        <input
+      <div className="flex gap-2 items-end">
+        <textarea
           ref={inputRef}
-          className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+          rows={1}
+          className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-none overflow-y-auto"
           placeholder={
             mode === 'brainstorm'
               ? '描述你想要的角色...'
               : '输入修改要求...'
           }
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value)
+            autoResize()
+          }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault()
               handleSend()
             }
@@ -166,11 +199,15 @@ export function ChatInput({ files, onSendComplete }: ChatInputProps) {
           disabled={loading}
         />
         <button
-          className="px-3 sm:px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap flex-shrink-0"
-          onClick={handleSend}
-          disabled={loading || !text.trim() || !apiConfig.apiKey}
+          className={
+            loading
+              ? 'px-3 sm:px-4 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors whitespace-nowrap flex-shrink-0'
+              : 'px-3 sm:px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap flex-shrink-0'
+          }
+          onClick={() => (loading ? abortActiveRequest() : handleSend())}
+          disabled={!loading && (!text.trim() || !apiConfig.apiKey)}
         >
-          {loading ? '...' : '发送'}
+          {loading ? '停止' : '发送'}
         </button>
       </div>
     </div>

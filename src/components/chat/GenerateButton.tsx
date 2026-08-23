@@ -1,7 +1,7 @@
 import { useGenerateCard } from './useGenerateCard'
 
 export function GenerateButton() {
-  const { generate, loading, mode } = useGenerateCard()
+  const { generate, loading, abort, mode } = useGenerateCard()
 
   if (mode !== 'brainstorm') return null
 
@@ -9,13 +9,12 @@ export function GenerateButton() {
     <button
       className={`text-xs px-3 py-1 rounded-full transition-colors ${
         loading
-          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          ? 'bg-red-500 text-white hover:bg-red-600'
           : 'bg-indigo-600 text-white hover:bg-indigo-700'
       }`}
-      onClick={() => generate()}
-      disabled={loading}
+      onClick={() => (loading ? abort() : generate())}
     >
-      {loading ? '⏳ 生成中...' : '✨ 生成角色卡'}
+      {loading ? '⏹ 停止生成' : '✨ 生成角色卡'}
     </button>
   )
 }

@@ -17,6 +17,7 @@ interface ChatState {
   pendingRegenerate: PendingRegenerate | null
   addMessage: (msg: ChatMessage) => void
   setMessages: (msgs: ChatMessage[]) => void
+  updateStreamingMessage: (content: string, done?: boolean) => void
   removeMessage: (index: number) => void
   excludePreviousMessages: () => void
   setMode: (mode: ChatMode) => void
@@ -47,6 +48,16 @@ export const useChatStore = create<ChatState>()(
         set((state) => ({ messages: [...state.messages, msg] })),
 
       setMessages: (messages) => set({ messages }),
+
+      updateStreamingMessage: (content, done = false) =>
+        set((state) => {
+          const messages = [...state.messages]
+          const last = messages.length - 1
+          if (last >= 0 && messages[last].role === 'assistant') {
+            messages[last] = { ...messages[last], content, streaming: !done }
+          }
+          return { messages }
+        }),
 
       removeMessage: (index) =>
         set((state) => ({

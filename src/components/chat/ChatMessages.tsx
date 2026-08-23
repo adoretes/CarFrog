@@ -198,6 +198,11 @@ export function ChatMessages() {
                         </div>
                       )}
                     </>
+                  ) : msg.streaming ? (
+                    <span className="whitespace-pre-wrap break-words">
+                      {msg.content}
+                      <span className="inline-block w-[2px] h-[1em] align-[-0.15em] ml-0.5 bg-gray-500 animate-pulse" />
+                    </span>
                   ) : (
                     <>
                       {msg.content.includes('<actions>') ? (

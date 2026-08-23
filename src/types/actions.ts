@@ -39,6 +39,8 @@ export interface ChatMessage {
   content: string
   excluded?: boolean
   files?: UploadedFile[]
+  /** 流式输出中：ChatMessages 对该消息用纯文本渲染，避免逐 token 全量 Markdown 重解析 */
+  streaming?: boolean
 }
 
 export interface ContentPart {

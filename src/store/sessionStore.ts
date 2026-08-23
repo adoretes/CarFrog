@@ -10,6 +10,7 @@ import {
   generateId,
 } from '../utils/idb'
 import { migrateLegacyData } from '../utils/migrate'
+import { abortActiveRequest } from '../api/requestControl'
 import { createEmptyCharaCard } from '../types'
 import { ensureCharaCard } from '../utils/charaUtils'
 import type { SessionData, SessionMeta } from '../types/session'
@@ -45,9 +46,12 @@ let dirty = false
 
 function applySessionToStores(data: SessionData): void {
   const mode = data.mode === 'generating' ? 'brainstorm' : data.mode
+  // 会话数据被整体替换时，进行中的流式请求已不属于新会话，中止以免污染与浪费 token
+  abortActiveRequest()
   suppressSave = true
   useChatStore.setState({
-    messages: data.messages,
+    // 上个会话若在流式中途被切走，残留的 streaming 标记在此清掉
+    messages: data.messages.map((m) => (m.streaming ? { ...m, streaming: false } : m)),
     mode,
     pendingRegenerate: data.pendingRegenerate,
   })
