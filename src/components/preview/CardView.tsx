@@ -1,4 +1,15 @@
 import { useEffect, useState } from 'react'
+import {
+  User,
+  MessageSquare,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  BookOpen,
+  Info,
+  Maximize2,
+  X,
+} from 'lucide-react'
 import { useCharaStore } from '../../store/charaStore'
 
 export function CardView() {
@@ -6,158 +17,261 @@ export function CardView() {
   const avatar = useCharaStore((s) => s.avatar)
   const d = card.data
   const hasContent = d.name || d.description
-  const [showLarge, setShowLarge] = useState(false)
+
+  const [greetingIndex, setGreetingIndex] = useState(0)
+  const [showLightbox, setShowLightbox] = useState(false)
+  const [viewMode, setViewMode] = useState<'tavern' | 'details'>('tavern')
+
+  const allGreetings = [d.first_mes, ...d.alternate_greetings].filter(Boolean)
 
   useEffect(() => {
-    if (!showLarge) return
+    if (!showLightbox) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowLarge(false)
+      if (e.key === 'Escape') setShowLightbox(false)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [showLarge])
+  }, [showLightbox])
 
   if (!hasContent) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-400 text-sm">
-        暂无角色卡数据
+      <div className="flex flex-col items-center justify-center h-72 text-center text-slate-400 select-none">
+        <Sparkles className="w-8 h-8 mb-2 opacity-30 animate-pulse" />
+        <p className="text-sm font-medium">暂无角色卡数据</p>
+        <p className="text-xs text-slate-500 mt-1">在左侧与 AI 对话即可自动生成角色卡内容</p>
       </div>
     )
   }
 
-  const showSide = showLarge && !!avatar
+  const currentGreeting = allGreetings[greetingIndex] || d.first_mes
 
   return (
-    <div className={`flex flex-col lg:flex-row gap-4 items-start ${showSide ? '' : 'justify-center'}`}>
-      <div className={`flex-1 min-w-0 w-full max-w-2xl ${showSide ? '' : 'mx-auto'} space-y-3 sm:space-y-4`}>
-        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 sm:p-6 border border-indigo-100">
-          <div className="flex items-start gap-3 sm:gap-4 mb-2">
-            {avatar && (
-              <img
-                src={avatar}
-                alt={d.name || 'avatar'}
-                onClick={() => setShowLarge((v) => !v)}
-                title={showSide ? '点击关闭大图' : '点击查看大图'}
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover border-2 border-white shadow-sm flex-shrink-0 cursor-zoom-in hover:opacity-90 transition-opacity"
-              />
-            )}
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2 break-words">{d.name || '未命名角色'}</h1>
-              {d.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {d.tags.map((tag, i) => (
-                    <span
-                      key={i}
-                      className="px-2 py-0.5 bg-white/60 text-indigo-700 rounded-full text-xs border border-indigo-200"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {d.description && (
-            <div className="mb-4 mt-4">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">📝 描述</h3>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{d.description}</p>
-            </div>
-          )}
-
-          {d.personality && (
-            <div className="mb-4">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">🎭 个性</h3>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{d.personality}</p>
-            </div>
-          )}
-
-          {d.scenario && (
-            <div className="mb-4">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">🌍 场景</h3>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{d.scenario}</p>
-            </div>
-          )}
+    <div className="max-w-3xl mx-auto space-y-4">
+      {/* 模式切换 */}
+      <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 dark:border-slate-800">
+        <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+          <button
+            type="button"
+            className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+              viewMode === 'tavern'
+                ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm'
+                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+            }`}
+            onClick={() => setViewMode('tavern')}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            酒馆沉浸模拟
+          </button>
+          <button
+            type="button"
+            className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+              viewMode === 'details'
+                ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm'
+                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+            }`}
+            onClick={() => setViewMode('details')}
+          >
+            <Info className="w-3.5 h-3.5" />
+            详细属性卡
+          </button>
         </div>
 
-        {d.first_mes && (
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">💬 首条消息</h3>
-            <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed border-l-4 border-indigo-400">
-              {d.first_mes}
-            </div>
-          </div>
-        )}
-
-        {d.alternate_greetings.length > 0 && (
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">🔄 替代问候语（{d.alternate_greetings.length}）</h3>
-            <div className="space-y-2">
-              {d.alternate_greetings.map((g, i) => (
-                <div key={i} className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed border-l-4 border-amber-400">
-                  {g}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {d.mes_example && (
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">📖 示例对话</h3>
-            <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-              {d.mes_example}
-            </div>
-          </div>
-        )}
-
-        {(d.character_book?.entries.length ?? 0) > 0 && (
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">📚 世界书（{d.character_book?.entries.length} 条目）</h3>
-            <div className="space-y-2">
-              {d.character_book?.entries.map((entry, i) => (
-                <div key={i} className="bg-amber-50 rounded-lg p-3 border border-amber-200">
-                  <div className="text-xs font-medium text-amber-900 mb-1 flex items-center gap-1.5">
-                    {entry.comment || `条目 #${i + 1}`}
-                    {entry.constant && <span className="text-[10px] px-1 py-0.5 bg-indigo-200 text-indigo-700 rounded">常驻</span>}
-                  </div>
-                  <div className="flex flex-wrap gap-1 mb-1">
-                    {entry.keys.map((k, j) => (
-                      <span key={j} className="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-xs">
-                        {k}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-600 whitespace-pre-wrap">{entry.content}</p>
-                </div>
-              ))}
+        {allGreetings.length > 1 && viewMode === 'tavern' && (
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+            <span>问候语：{greetingIndex + 1} / {allGreetings.length}</span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 transition-colors"
+                disabled={greetingIndex <= 0}
+                onClick={() => setGreetingIndex((v) => Math.max(0, v - 1))}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 transition-colors"
+                disabled={greetingIndex >= allGreetings.length - 1}
+                onClick={() => setGreetingIndex((v) => Math.min(allGreetings.length - 1, v + 1))}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
         )}
       </div>
 
-      {showSide && (
-        <div className="flex-1 min-w-0 w-full lg:sticky lg:top-0 lg:self-start">
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50">
-              <div className="text-xs font-medium text-gray-600 truncate">
-                {d.name || '头像预览'}
-              </div>
-              <button
-                onClick={() => setShowLarge(false)}
-                className="w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 transition-colors text-sm"
-                title="关闭 (Esc)"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="bg-gray-50 flex items-center justify-center p-3">
+      {/* 头部立绘与基础卡片 */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-50/80 via-indigo-50/40 to-slate-50 dark:from-slate-850 dark:via-slate-900 dark:to-slate-950 border border-brand-100/80 dark:border-slate-800 p-4 sm:p-5 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="relative group flex-shrink-0">
+            {avatar ? (
               <img
                 src={avatar}
                 alt={d.name || 'avatar'}
-                className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                onClick={() => setShowLightbox(true)}
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-white dark:border-slate-700 shadow-md cursor-zoom-in group-hover:scale-102 transition-all duration-150"
               />
+            ) : (
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-brand-100 dark:bg-slate-800 border-2 border-white dark:border-slate-700 flex items-center justify-center text-brand-600 dark:text-brand-400 shadow-md">
+                <User className="w-10 h-10 opacity-70" />
+              </div>
+            )}
+            {avatar && (
+              <div
+                onClick={() => setShowLightbox(true)}
+                className="absolute inset-0 rounded-2xl bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white cursor-pointer pointer-events-none"
+              >
+                <Maximize2 className="w-5 h-5" />
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 break-words">
+                {d.name || '未命名角色'}
+              </h2>
+              {d.personality && (
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-brand-100/80 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 font-medium">
+                  {d.personality.slice(0, 20)}
+                </span>
+              )}
             </div>
+
+            {d.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {d.tags.map((tag, i) => (
+                  <span
+                    key={i}
+                    className="px-2 py-0.5 bg-white/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-md text-[11px] border border-slate-200/80 dark:border-slate-700 font-medium"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {d.description && (
+              <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-3 leading-relaxed">
+                {d.description}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 酒馆沉浸视图 */}
+      {viewMode === 'tavern' && (
+        <div className="space-y-4">
+          {/* 开场消息气泡 */}
+          {currentGreeting ? (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm space-y-2.5">
+              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                <span className="font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                  <MessageSquare className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+                  {d.name || '角色'} 的开场白
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {greetingIndex === 0 ? '首条消息 (first_mes)' : `分支问候语 #${greetingIndex}`}
+                </span>
+              </div>
+              <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-xl text-xs sm:text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap leading-relaxed border-l-4 border-brand-500 font-serif border border-slate-200/60 dark:border-slate-800/80 shadow-2xs">
+                {currentGreeting}
+              </div>
+            </div>
+          ) : null}
+
+          {/* 示例对话 */}
+          {d.mes_example && (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm space-y-2.5">
+              <div className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>示例对话模拟</span>
+              </div>
+              <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-xl text-xs sm:text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed font-mono border border-slate-200/60 dark:border-slate-800/80 shadow-2xs">
+                {d.mes_example}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 详细属性详情 */}
+      {viewMode === 'details' && (
+        <div className="space-y-3">
+          {d.scenario && (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-1.5">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                🌍 场景背景
+              </span>
+              <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                {d.scenario}
+              </p>
+            </div>
+          )}
+
+          {d.character_book?.entries && d.character_book.entries.length > 0 && (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-200">
+                <span className="flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-amber-500" />
+                  世界书 ({d.character_book.entries.length} 条)
+                </span>
+              </div>
+              <div className="space-y-2">
+                {d.character_book.entries.map((entry, i) => (
+                  <div
+                    key={i}
+                    className="p-2.5 rounded-xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-900/40 text-xs space-y-1"
+                  >
+                    <div className="flex items-center justify-between font-medium text-amber-900 dark:text-amber-200">
+                      <span>{entry.comment || `条目 #${i + 1}`}</span>
+                      {entry.constant && (
+                        <span className="text-[10px] px-1.5 py-0.5 bg-amber-200/70 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 rounded">
+                          常驻
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {entry.keys.map((k, ki) => (
+                        <span
+                          key={ki}
+                          className="px-1.5 py-0.5 bg-white/80 dark:bg-slate-900 rounded text-[10px] text-amber-800 dark:text-amber-300"
+                        >
+                          {k}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed text-[11px]">
+                      {entry.content}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 头像灯箱大图 */}
+      {showLightbox && avatar && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowLightbox(false)}
+        >
+          <div className="relative max-w-2xl max-h-[85vh]">
+            <button
+              className="absolute -top-10 right-0 p-2 text-white/80 hover:text-white transition-colors"
+              onClick={() => setShowLightbox(false)}
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img
+              src={avatar}
+              alt={d.name || 'avatar'}
+              className="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl border border-white/20"
+            />
           </div>
         </div>
       )}

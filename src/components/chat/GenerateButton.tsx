@@ -1,3 +1,4 @@
+import { Sparkles, Square } from 'lucide-react'
 import { useGenerateCard } from './useGenerateCard'
 
 export function GenerateButton() {
@@ -7,14 +8,24 @@ export function GenerateButton() {
 
   return (
     <button
-      className={`text-xs px-3 py-1 rounded-full transition-colors ${
+      className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all shadow-sm active:scale-95 whitespace-nowrap ${
         loading
-          ? 'bg-red-500 text-white hover:bg-red-600'
-          : 'bg-indigo-600 text-white hover:bg-indigo-700'
+          ? 'bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/20'
+          : 'bg-brand-600 hover:bg-brand-700 text-white shadow-brand-500/20'
       }`}
       onClick={() => (loading ? abort() : generate())}
     >
-      {loading ? '⏹ 停止生成' : '✨ 生成角色卡'}
+      {loading ? (
+        <>
+          <Square className="w-3 h-3 fill-current" />
+          <span>停止生成</span>
+        </>
+      ) : (
+        <>
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>生成角色卡</span>
+        </>
+      )}
     </button>
   )
 }

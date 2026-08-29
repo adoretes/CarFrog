@@ -3,14 +3,25 @@
 @tailwind utilities;
 
 :root {
-  --color-bg: #f8f9fa;
+  --color-bg: #f8fafc;
   --color-surface: #ffffff;
   --color-border: #e2e8f0;
-  --color-text: #1a202c;
-  --color-text-secondary: #718096;
-  --color-primary: #5b6abf;
-  --color-primary-hover: #4a58a8;
-  --color-accent: #ed8936;
+  --color-text: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+  --color-accent: #f59e0b;
+}
+
+.dark {
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-border: #334155;
+  --color-text: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-primary: #6366f1;
+  --color-primary-hover: #818cf8;
+  --color-accent: #fbbf24;
 }
 
 * {
@@ -27,7 +38,7 @@ html, body {
 body {
   background: var(--color-bg);
   color: var(--color-text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -44,7 +55,8 @@ body {
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -52,8 +64,20 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e0;
-  border-radius: 3px;
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }
 
 .chat-messages {

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { Copy, Check, Edit3, X, AlertCircle } from 'lucide-react'
 import { useCharaStore } from '../../store/charaStore'
 import { cardToJsonString } from '../../utils/charaUtils'
 
@@ -28,7 +29,7 @@ export function JsonView() {
       setEditing(false)
       setError('')
     } else {
-      setError('JSON 格式错误，请检查后重试')
+      setError('JSON 格式不符合规范或存在语法错误，请检查后重试')
     }
   }, [editText, loadFromJson])
 
@@ -50,38 +51,45 @@ export function JsonView() {
   }
 
   return (
-    <div className="flex flex-col h-full gap-2">
+    <div className="flex flex-col h-full gap-3">
       <div className="flex items-center justify-between shrink-0">
-        <h3 className="text-sm font-semibold text-gray-700">原始 JSON</h3>
-        <div className="flex gap-1">
+        <div>
+          <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">原始 JSON 规范</span>
+          <span className="ml-2 text-[10px] text-slate-400 font-mono">SillyTavern V2 Spec</span>
+        </div>
+        <div className="flex items-center gap-1.5">
           {editing ? (
             <>
               <button
-                className="text-xs px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl transition-all shadow-sm shadow-emerald-600/20"
                 onClick={saveEditing}
               >
-                ✓ 保存
+                <Check className="w-3.5 h-3.5" />
+                <span>保存并应用</span>
               </button>
               <button
-                className="text-xs px-3 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
+                className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl transition-all"
                 onClick={cancelEditing}
               >
-                ✕ 取消
+                <X className="w-3.5 h-3.5" />
+                <span>取消</span>
               </button>
             </>
           ) : (
             <>
               <button
-                className="text-xs px-3 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
+                className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl transition-all border border-slate-200/60 dark:border-slate-700/60"
                 onClick={startEditing}
               >
-                ✏️ 编辑
+                <Edit3 className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+                <span>在线编辑</span>
               </button>
               <button
-                className="text-xs px-3 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
+                className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl transition-all border border-slate-200/60 dark:border-slate-700/60"
                 onClick={handleCopy}
               >
-                {copied ? '✅ 已复制' : '📋 复制'}
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copied ? '已复制' : '复制 JSON'}</span>
               </button>
             </>
           )}
@@ -89,14 +97,15 @@ export function JsonView() {
       </div>
 
       {error && (
-        <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded px-3 py-1 shrink-0">
-          {error}
+        <div className="flex items-center gap-2 text-xs text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl p-2.5 shrink-0">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
       {editing ? (
         <textarea
-          className="w-full flex-1 min-h-0 border border-indigo-300 rounded-lg p-4 text-xs font-mono overflow-auto leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+          className="w-full flex-1 min-h-0 bg-slate-900 text-emerald-300 border border-brand-500 rounded-2xl p-4 text-xs font-mono overflow-auto leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand-500/30 resize-none shadow-inner"
           value={editText}
           onChange={(e) => {
             setEditText(e.target.value)
@@ -105,9 +114,9 @@ export function JsonView() {
         />
       ) : (
         <pre
-          className="flex-1 min-h-0 bg-gray-50 border border-gray-200 rounded-lg p-4 text-xs font-mono overflow-auto leading-relaxed cursor-pointer hover:border-gray-300 transition-colors"
+          className="flex-1 min-h-0 bg-slate-900 dark:bg-slate-950 text-slate-200 border border-slate-800 rounded-2xl p-4 text-xs font-mono overflow-auto leading-relaxed cursor-pointer hover:border-slate-700 transition-colors shadow-inner select-text"
           onClick={startEditing}
-          title="点击编辑"
+          title="点击即可进入在线编辑"
         >
           {json}
         </pre>

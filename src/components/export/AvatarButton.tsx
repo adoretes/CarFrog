@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { ImagePlus, Trash2 } from 'lucide-react'
 import { useCharaStore } from '../../store/charaStore'
 import { useChatStore } from '../../store/chatStore'
 import { useSessionStore } from '../../store/sessionStore'
@@ -44,21 +45,29 @@ export function AvatarButton() {
   return (
     <div className="flex items-center gap-1">
       <button
-        className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors whitespace-nowrap"
+        className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-all whitespace-nowrap border border-slate-200/60 dark:border-slate-700/60 shadow-sm"
         onClick={() => avatarInputRef.current?.click()}
+        title="设置角色头像"
       >
-        🎨 头像
+        <ImagePlus className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+        <span className="hidden sm:inline">头像</span>
       </button>
       {hasAvatar && (
         <button
-          className="px-2 py-1.5 text-xs sm:text-sm text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
+          className="p-1.5 text-xs text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-colors"
           onClick={handleRemoveAvatar}
           title="移除头像"
         >
-          ✕
+          <Trash2 className="w-3.5 h-3.5" />
         </button>
       )}
-      <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarImport} />
+      <input
+        ref={avatarInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleAvatarImport}
+      />
     </div>
   )
 }

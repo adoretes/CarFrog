@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Tag, Plus, X } from 'lucide-react'
 import { useCharaStore } from '../../store/charaStore'
 
 export function TagEditor() {
@@ -19,28 +20,33 @@ export function TagEditor() {
   }
 
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-gray-700">标签</h3>
-      <div className="flex flex-wrap gap-1">
+    <div className="space-y-2.5">
+      <div className="flex flex-wrap items-center gap-1.5 min-h-[32px]">
+        {tags.length === 0 && (
+          <span className="text-xs text-slate-400">暂无标签，可在下方添加</span>
+        )}
         {tags.map((tag, i) => (
           <span
             key={i}
-            className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full text-xs"
+            className="inline-flex items-center gap-1 px-2.5 py-1 bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 rounded-lg text-xs font-medium border border-brand-200/60 dark:border-brand-800/60 shadow-2xs"
           >
-            {tag}
+            <Tag className="w-3 h-3 opacity-60" />
+            <span>{tag}</span>
             <button
-              className="text-indigo-400 hover:text-red-500"
+              type="button"
+              className="text-brand-400 hover:text-rose-500 rounded p-0.5 transition-colors"
               onClick={() => removeTag(i)}
             >
-              ×
+              <X className="w-3 h-3" />
             </button>
           </span>
         ))}
       </div>
+
       <div className="flex gap-2">
         <input
-          className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400"
-          placeholder="输入标签后回车"
+          className="flex-1 px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800 dark:text-slate-100 placeholder-slate-400 transition-all"
+          placeholder="输入标签（例如：二次元、治愈、赛博朋克）按 Enter 添加"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
@@ -51,10 +57,12 @@ export function TagEditor() {
           }}
         />
         <button
-          className="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+          type="button"
+          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-brand-600 hover:bg-brand-700 active:scale-95 text-white rounded-xl transition-all shadow-sm flex-shrink-0"
           onClick={addTag}
         >
-          添加
+          <Plus className="w-3.5 h-3.5" />
+          <span>添加</span>
         </button>
       </div>
     </div>

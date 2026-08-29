@@ -1,4 +1,12 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useMemo } from 'react'
+import {
+  Plus,
+  Trash2,
+  FolderInput,
+  Search,
+  BookMarked,
+  Sparkles,
+} from 'lucide-react'
 import { useCharaStore } from '../../store/charaStore'
 import { useChatStore } from '../../store/chatStore'
 import { useSessionStore } from '../../store/sessionStore'
@@ -12,11 +20,25 @@ export function WorldBookPanel() {
   const addMessage = useChatStore((s) => s.addMessage)
   const wb = card.data.character_book ?? { name: card.data.name || null, entries: [] }
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [filterText, setFilterText] = useState('')
   const [importModal, setImportModal] = useState<{
     wb: WorldBook
     source: string
     sessionId: string | null
   } | null>(null)
+
+  const filteredEntries = useMemo(() => {
+    const q = filterText.trim().toLowerCase()
+    if (!q) return wb.entries.map((entry, index) => ({ entry, index }))
+    return wb.entries
+      .map((entry, index) => ({ entry, index }))
+      .filter(({ entry }) => {
+        const comment = (entry.comment || '').toLowerCase()
+        const keys = entry.keys.join(' ').toLowerCase()
+        const content = entry.content.toLowerCase()
+        return comment.includes(q) || keys.includes(q) || content.includes(q)
+      })
+  }, [wb.entries, filterText])
 
   const addEntry = () => {
     const newEntry = createDefaultWorldBookEntry()
@@ -74,94 +96,139 @@ export function WorldBookPanel() {
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-700">世界书</h3>
-        <div className="flex gap-1">
+    <div className="space-y-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+            共 {wb.entries.length} 个条目（已激活 {wb.entries.filter((e) => e.enabled !== false).length}）
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
           <button
-            className="text-xs px-2 py-1 bg-amber-50 text-amber-600 rounded hover:bg-amber-100 transition-colors"
+            type="button"
+            className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg transition-colors border border-slate-200/60 dark:border-slate-700/60"
             onClick={() => fileInputRef.current?.click()}
           >
-            📥 导入
+            <FolderInput className="w-3.5 h-3.5 text-amber-500" />
+            <span>导入世界书</span>
           </button>
           {wb.entries.length > 0 && (
             <button
-              className="text-xs px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+              type="button"
+              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
               onClick={() => {
-                setField('data.character_book', { ...wb, entries: [] })
-                addMessage({ role: 'assistant', content: '🗑️ 已清除所有世界书条目' })
+                if (confirm('确定清空所有世界书条目？')) {
+                  setField('data.character_book', { ...wb, entries: [] })
+                  addMessage({ role: 'assistant', content: '🗑️ 已清除所有世界书条目' })
+                }
               }}
             >
-              🗑️ 清除
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>清空</span>
             </button>
           )}
           <button
-            className="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded hover:bg-amber-200 transition-colors"
+            type="button"
+            className="flex items-center gap-1 text-xs font-medium px-3 py-1 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white rounded-lg transition-all shadow-sm shadow-amber-500/20"
             onClick={addEntry}
           >
-            + 添加条目
+            <Plus className="w-3.5 h-3.5" />
+            <span>添加条目</span>
           </button>
         </div>
       </div>
 
       <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleFileSelect} />
 
-      <div>
-        <label className="block text-xs text-gray-400 mb-0.5">世界书名称</label>
-        <input
-          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400"
-          value={wb.name || ''}
-          onChange={(e) => setField('data.character_book.name', e.target.value || null)}
-          placeholder="（可选）"
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+            世界书名称 (Character Book Name)
+          </label>
+          <input
+            className="w-full px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-500 text-slate-800 dark:text-slate-100 placeholder-slate-400"
+            value={wb.name || ''}
+            onChange={(e) => setField('data.character_book.name', e.target.value || null)}
+            placeholder="（可选）如：提瓦特设定集"
+          />
+        </div>
+        {wb.entries.length > 2 && (
+          <div>
+            <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+              过滤条目
+            </label>
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-500 text-slate-800 dark:text-slate-100 placeholder-slate-400"
+                placeholder="搜索条目标题或关键词..."
+                value={filterText}
+                onChange={(e) => setFilterText(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
-      {wb.entries.length === 0 && (
-        <p className="text-xs text-gray-400 py-2">暂无世界书条目，可点击"添加条目"或通过 AI 聊天生成</p>
+      {wb.entries.length === 0 ? (
+        <div className="p-6 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl space-y-1">
+          <BookMarked className="w-6 h-6 mx-auto text-slate-300 dark:text-slate-600 mb-1" />
+          <p className="text-xs font-medium text-slate-600 dark:text-slate-300">暂无世界书设定条目</p>
+          <p className="text-[11px] text-slate-400">点击「添加条目」或直接在对话中让 AI 补充世界观百科设定</p>
+        </div>
+      ) : filteredEntries.length === 0 ? (
+        <div className="p-4 text-center text-xs text-slate-400">
+          未找到与「{filterText}」匹配的条目
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {filteredEntries.map(({ entry, index }) => (
+            <EntryEditor
+              key={index}
+              entry={entry}
+              index={index}
+              onChange={updateEntry}
+              onRemove={removeEntry}
+            />
+          ))}
+        </div>
       )}
 
-      <div className="space-y-2">
-        {wb.entries.map((entry, i) => (
-          <EntryEditor
-            key={i}
-            entry={entry}
-            index={i}
-            onChange={updateEntry}
-            onRemove={removeEntry}
-          />
-        ))}
-      </div>
-
+      {/* 导入确认模态框 */}
       {importModal && (
-        <>
-          <div className="fixed inset-0 z-30 bg-black/20" onClick={() => setImportModal(null)} />
-          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-40 w-72 bg-white border border-gray-200 rounded-lg shadow-xl p-4">
-            <p className="text-sm font-medium text-gray-800 mb-3">
-              检测到{importModal.source}（{importModal.wb.entries.length} 条条目）
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-100">
+            <div className="flex items-center gap-2.5 text-brand-600 dark:text-brand-400">
+              <Sparkles className="w-5 h-5" />
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                导入世界书数据
+              </h3>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              检测到来自 <span className="font-semibold text-slate-800 dark:text-slate-100">{importModal.source}</span> 的世界书，共包含 <span className="font-semibold text-brand-600 dark:text-brand-400">{importModal.wb.entries.length}</span> 条设定条目。请选择操作方式：
             </p>
-            <p className="text-xs text-gray-500 mb-3">请选择导入方式：</p>
-            <div className="flex gap-2">
+            <div className="flex gap-2 pt-2">
               <button
-                className="flex-1 px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+                className="flex-1 py-2 text-xs font-medium bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-xl transition-all shadow-sm"
                 onClick={() => doImport('replace')}
               >
-                替换
+                替换现有
               </button>
               <button
-                className="flex-1 px-3 py-1.5 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors"
+                className="flex-1 py-2 text-xs font-medium bg-brand-600 hover:bg-brand-700 active:scale-95 text-white rounded-xl transition-all shadow-sm"
                 onClick={() => doImport('append')}
               >
-                追加
+                追加合并
               </button>
               <button
-                className="flex-1 px-3 py-1.5 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                className="px-3 py-2 text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 rounded-xl transition-all"
                 onClick={() => setImportModal(null)}
               >
                 取消
               </button>
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   )
