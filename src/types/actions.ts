@@ -1,3 +1,5 @@
+import type { CharaCard } from './charaCard'
+
 export type ActionType = 'set' | 'add' | 'remove'
 
 export interface SetAction {
@@ -41,6 +43,8 @@ export interface ChatMessage {
   files?: UploadedFile[]
   /** 流式输出中：ChatMessages 对该消息用纯文本渲染，避免逐 token 全量 Markdown 重解析 */
   streaming?: boolean
+  /** 精修指令应用前的角色卡快照，用于「回滚」按钮还原卡片 */
+  cardSnapshot?: CharaCard
 }
 
 export interface ContentPart {

@@ -9,7 +9,7 @@
 			"preLaunchTask": "npm: dev",
 			"type": "editor-browser",
 			"request": "launch",
-			"name": "针对 localhost 启动集成浏览器",
+			"name": "启动本地测试",
 			"url": "http://localhost:5173",
 			"webRoot": "${workspaceFolder}"
 		}

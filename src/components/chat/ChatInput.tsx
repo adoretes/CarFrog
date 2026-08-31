@@ -120,7 +120,9 @@ export function ChatInput({ files, onSendComplete }: ChatInputProps) {
       } else if (mode === 'refine') {
         const actions = parseActionsFromText(fullContent)
         if (actions.length > 0) {
+          const snapshot = structuredClone(useCharaStore.getState().card)
           executeActions(actions)
+          useChatStore.getState().attachCardSnapshot(snapshot)
         }
       }
     } catch (err) {

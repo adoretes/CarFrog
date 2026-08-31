@@ -4,6 +4,7 @@ import {
   Copy,
   Check,
   RotateCcw,
+  Undo2,
   Trash2,
   ChevronRight,
   Sparkles,
@@ -12,6 +13,7 @@ import {
   Wrench,
 } from 'lucide-react'
 import { useChatStore } from '../../store/chatStore'
+import { useCharaStore } from '../../store/charaStore'
 import { parseActionsFromText } from '../../utils/charaUtils'
 import type { Components } from 'react-markdown'
 
@@ -171,9 +173,32 @@ export function ChatMessages() {
     }
     if (lastUserIndex === -1) return
 
+    const lastAi = messages[lastAiIndex]
+    if (lastAi.cardSnapshot) {
+      useCharaStore.getState().setCard(lastAi.cardSnapshot)
+    }
+
     const userMsg = messages[lastUserIndex]
     setMessages(messages.slice(0, lastUserIndex))
     setPendingRegenerate({ content: userMsg.content, files: userMsg.files ?? [] })
+  }
+
+  const handleRollback = () => {
+    const lastAiIndex = messages.length - 1
+    const msg = messages[lastAiIndex]
+    if (msg?.role !== 'assistant' || !msg.cardSnapshot) return
+
+    let lastUserIndex = -1
+    for (let i = lastAiIndex - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        lastUserIndex = i
+        break
+      }
+    }
+    if (lastUserIndex === -1) return
+
+    useCharaStore.getState().setCard(msg.cardSnapshot)
+    setMessages(messages.slice(0, lastUserIndex))
   }
 
   if (messages.length === 0) {
@@ -252,13 +277,24 @@ export function ChatMessages() {
                   </button>
 
                   {isLastAi && !isExcluded && (
-                    <button
-                      className="p-1 text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 rounded transition-colors"
-                      onClick={handleRegenerate}
-                      title="重新生成"
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                    </button>
+                    <>
+                      <button
+                        className="p-1 text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 rounded transition-colors"
+                        onClick={handleRegenerate}
+                        title="重新生成"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                      </button>
+                      {msg.cardSnapshot && (
+                        <button
+                          className="p-1 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 rounded transition-colors"
+                          onClick={handleRollback}
+                          title="回滚（撤销本次微调，恢复应用指令前的角色卡）"
+                        >
+                          <Undo2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </>
                   )}
 
                   <button

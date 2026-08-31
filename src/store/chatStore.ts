@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ChatMessage, ChatMode, ApiConfig, PendingRegenerate } from '../types/actions'
+import type { CharaCard } from '../types'
 import {
   DEFAULT_BRAINSTORM_PROMPT,
   DEFAULT_GENERATE_PROMPT,
@@ -18,6 +19,7 @@ interface ChatState {
   addMessage: (msg: ChatMessage) => void
   setMessages: (msgs: ChatMessage[]) => void
   updateStreamingMessage: (content: string, done?: boolean) => void
+  attachCardSnapshot: (snapshot: CharaCard) => void
   removeMessage: (index: number) => void
   excludePreviousMessages: () => void
   setMode: (mode: ChatMode) => void
@@ -55,6 +57,16 @@ export const useChatStore = create<ChatState>()(
           const last = messages.length - 1
           if (last >= 0 && messages[last].role === 'assistant') {
             messages[last] = { ...messages[last], content, streaming: !done }
+          }
+          return { messages }
+        }),
+
+      attachCardSnapshot: (snapshot) =>
+        set((state) => {
+          const messages = [...state.messages]
+          const last = messages.length - 1
+          if (last >= 0 && messages[last].role === 'assistant') {
+            messages[last] = { ...messages[last], cardSnapshot: snapshot }
           }
           return { messages }
         }),
