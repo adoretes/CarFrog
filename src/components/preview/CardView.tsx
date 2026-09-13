@@ -128,19 +128,12 @@ export function CardView() {
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-              <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 break-words">
-                {d.name || '未命名角色'}
-              </h2>
-              {d.personality && (
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-brand-100/80 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 font-medium">
-                  {d.personality.slice(0, 20)}
-                </span>
-              )}
-            </div>
+            <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 break-words mb-1.5">
+              {d.name || '未命名角色'}
+            </h2>
 
             {d.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-2">
+              <div className="flex flex-wrap gap-1">
                 {d.tags.map((tag, i) => (
                   <span
                     key={i}
@@ -151,14 +144,34 @@ export function CardView() {
                 ))}
               </div>
             )}
-
-            {d.description && (
-              <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-3 leading-relaxed">
-                {d.description}
-              </p>
-            )}
           </div>
         </div>
+
+        {(d.description || d.personality) && (
+          <div className="mt-3.5 space-y-3">
+            {d.description && (
+              <div className="space-y-1">
+                <span className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  📝 设定与外貌描述
+                </span>
+                <p className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap break-words leading-relaxed">
+                  {d.description}
+                </p>
+              </div>
+            )}
+
+            {d.personality && (
+              <div className="space-y-1">
+                <span className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  💗 性格特点
+                </span>
+                <p className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap break-words leading-relaxed">
+                  {d.personality}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 酒馆沉浸视图 */}
@@ -200,12 +213,22 @@ export function CardView() {
       {/* 详细属性详情 */}
       {viewMode === 'details' && (
         <div className="space-y-3">
+          {!d.scenario && !(d.character_book?.entries && d.character_book.entries.length > 0) && (
+            <div className="flex flex-col items-center justify-center py-10 text-center text-slate-400 select-none">
+              <Info className="w-6 h-6 mb-2 opacity-40" />
+              <p className="text-xs">暂无更多属性</p>
+              <p className="text-[11px] text-slate-500 mt-1">
+                设定与外貌描述、性格特点已显示在上方角色卡中
+              </p>
+            </div>
+          )}
+
           {d.scenario && (
             <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-1.5">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 🌍 场景背景
               </span>
-              <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words leading-relaxed">
                 {d.scenario}
               </p>
             </div>
