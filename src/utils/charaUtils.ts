@@ -161,6 +161,66 @@ export const DEFAULT_REFINE_PROMPT = `用户可以对角色卡任意字段或世
 ## 输出规则
 
 ### 格式要求
+将修改指令包裹在 <actions> 标签中，格式为 JSON 数组（整张卡只输出一个 <actions> 块）：
+
+<actions>
+[
+  { "type": "replace", "path": "data.description", "find": "她怕黑", "replace": "她不怕黑" },
+  { "type": "set", "path": "data.name", "value": "新值" },
+  { "type": "add", "path": "data.tags", "value": "新标签" },
+  { "type": "remove", "path": "data.tags", "index": 2 }
+]
+</actions>
+
+### 支持的操作
+1. replace：字段内局部替换（改一句、删一句、插入一小段都靠它，长文本首选）
+   - "find"：必须逐字存在于当前字段中（从上面注入的卡片 JSON 里原样复制）
+   - "replace"：替换文本；设为 "" 表示删除该片段
+   - "all"：可选，默认 false（只替换第一处）；true 表示替换全部命中
+   - "count"：可选，声明期望命中次数，实际不符时整条指令不生效（防止改错位置）
+   - "index"：可选，path 指向字符串数组（如 data.alternate_greetings）时指定元素下标
+
+2. patch：对同一字段按顺序执行多条编辑，任一 op 未命中则整条不生效（原子），适合一次改多处
+   { "type": "patch", "path": "data.first_mes", "ops": [
+     { "op": "replace", "find": "你好", "replace": "好久不见" },
+     { "op": "delete", "find": "（笑）" },
+     { "op": "insert", "find": "好久不见", "text": "，", "before": false }
+   ] }
+   - "replace" / "delete" 支持 "all"；"insert" 默认插在 "find" 之后，"before" 为 true 时插在之前
+   - ops 的元素保持扁平（只有字符串/数字/布尔），不要嵌套
+
+3. set：整段设置字段值。短字段或整段重写时使用；长文本请优先用 replace / patch，不要用 set 重发整段
+4. add：向数组追加一个元素
+5. remove：删除数组指定索引的元素
+
+### 路径示例
+- 普通字段：data.description、data.personality、data.scenario、data.first_mes、data.mes_example
+- 字符串数组元素：path = "data.alternate_greetings"，配合 index = 1
+- 世界书条目：data.character_book.entries[2].content、data.character_book.entries[0].keys
+
+### 选择策略
+- 只想改动长文本中的一小部分 → replace 或 patch（省 token，也不会因为重发整段而被截断）
+- 同一字段要改多处 → 用一个 patch 保证要么全改、要么不改
+
+### 重要：引号与换行
+- value / find / replace / text 中的对话内容请使用中文引号“”或「」包裹，不要使用英文双引号
+- find 中的换行必须写成 \\n（JSON 转义），不要写成真实换行
+- find 未命中时卡片不会被改动，会收到失败反馈：请再从注入的卡片 JSON 中复制精确片段后重试
+
+### 其他要求
+- 在 <actions> 之外可以附上说明文字
+- 只输出需要变更的部分，精炼准确
+- 用中文与用户交流`
+
+/**
+ * 旧版默认精修提示词（仅支持 set / add / remove）。
+ * 仅用于 persist 迁移比较：命中说明用户从未自定义过，可安全升级为新版。
+ */
+export const LEGACY_REFINE_PROMPT_V1 = `用户可以对角色卡任意字段或世界书条目提出修改要求。
+
+## 输出规则
+
+### 格式要求
 将修改指令包裹在 <actions> 标签中，格式为 JSON 数组：
 
 <actions>

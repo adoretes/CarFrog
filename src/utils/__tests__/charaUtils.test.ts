@@ -4,6 +4,8 @@ import {
   parseActionsFromText,
   ensureCharaCard,
   buildApiMessages,
+  buildRefineSystemPrompt,
+  DEFAULT_REFINE_PROMPT,
 } from '../charaUtils'
 import type { ChatMessage } from '../../types/actions'
 
@@ -77,6 +79,61 @@ describe('parseActionsFromText', () => {
 
   it('无 actions 标签返回空数组', () => {
     expect(parseActionsFromText('没有指令的普通回复')).toEqual([])
+  })
+
+  it('解析 replace / patch 指令', () => {
+    const text = `<actions>
+[
+  { "type": "replace", "path": "data.description", "find": "她怕黑", "replace": "她不怕黑", "all": true, "count": 2 },
+  { "type": "patch", "path": "data.first_mes", "ops": [
+    { "op": "delete", "find": "（笑）" },
+    { "op": "insert", "find": "你好", "text": "，", "before": false }
+  ] }
+]
+</actions>`
+    const actions = parseActionsFromText(text)
+    expect(actions).toHaveLength(2)
+    expect(actions[0]).toMatchObject({ type: 'replace', find: '她怕黑', all: true, count: 2 })
+    expect(actions[1]).toMatchObject({ type: 'patch', path: 'data.first_mes' })
+    expect((actions[1] as { ops: unknown[] }).ops).toHaveLength(2)
+  })
+
+  it('数组被截断时仍能抢救出 patch 条目（ops 为扁平对象）', () => {
+    const text = `<actions>
+[
+  { "type": "patch", "path": "data.first_mes", "ops": [ { "op": "delete", "find": "（笑）" } ] },
+  { "type": "replace", "path": "data.name", "find": "甲", "replace": "乙" }
+</actions>`
+    const actions = parseActionsFromText(text)
+    expect(actions).toHaveLength(2)
+    expect(actions[0].type).toBe('patch')
+  })
+})
+
+describe('DEFAULT_REFINE_PROMPT', () => {
+  it('覆盖所有受支持的指令类型（新增动作时同步更新提示词）', () => {
+    for (const keyword of [
+      '"type": "set"',
+      '"type": "replace"',
+      '"type": "add"',
+      '"type": "remove"',
+      '"type": "patch"',
+      '"op": "replace"',
+      '"op": "delete"',
+      '"op": "insert"',
+      '"all"',
+      '"count"',
+      '"index"',
+    ]) {
+      expect(DEFAULT_REFINE_PROMPT).toContain(keyword)
+    }
+  })
+
+  it('buildRefineSystemPrompt 注入卡片 JSON 与精修提示词', () => {
+    const card = ensureCharaCard(JSON.parse(v2CardJson()))
+    const prompt = buildRefineSystemPrompt(card, DEFAULT_REFINE_PROMPT)
+    expect(prompt).toContain('测试角色')
+    expect(prompt).toContain('"type": "replace"')
   })
 })
 

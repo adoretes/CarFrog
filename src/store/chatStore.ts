@@ -1,11 +1,12 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { ChatMessage, ChatMode, ApiConfig, PendingRegenerate } from '../types/actions'
+import type { ChatMessage, ChatMode, ApiConfig, PendingRegenerate, ActionReport } from '../types/actions'
 import type { CharaCard } from '../types'
 import {
   DEFAULT_BRAINSTORM_PROMPT,
   DEFAULT_GENERATE_PROMPT,
   DEFAULT_REFINE_PROMPT,
+  LEGACY_REFINE_PROMPT_V1,
 } from '../utils/charaUtils'
 
 interface ChatState {
@@ -20,6 +21,7 @@ interface ChatState {
   setMessages: (msgs: ChatMessage[]) => void
   updateStreamingMessage: (content: string, done?: boolean) => void
   attachCardSnapshot: (snapshot: CharaCard) => void
+  attachActionReport: (report: ActionReport) => void
   removeMessage: (index: number) => void
   excludePreviousMessages: () => void
   setMode: (mode: ChatMode) => void
@@ -71,6 +73,16 @@ export const useChatStore = create<ChatState>()(
           return { messages }
         }),
 
+      attachActionReport: (report) =>
+        set((state) => {
+          const messages = [...state.messages]
+          const last = messages.length - 1
+          if (last >= 0 && messages[last].role === 'assistant') {
+            messages[last] = { ...messages[last], actionReport: report }
+          }
+          return { messages }
+        }),
+
       removeMessage: (index) =>
         set((state) => ({
           messages: state.messages.filter((_, i) => i !== index),
@@ -103,6 +115,17 @@ export const useChatStore = create<ChatState>()(
     }),
     {
       name: 'carfrog-settings',
+      version: 2,
+      // v0/v1 无版本字段之外的结构差异，唯一需要处理的是：
+      // 用户从未自定义过精修提示词时（存的还是旧默认文本），升级为新默认值，
+      // 否则新增的 replace / patch 指令永远不会被 AI 使用。
+      migrate: (persistedState, version) => {
+        const state = persistedState as (Partial<ChatState> & { refinePrompt?: string }) | undefined
+        if (state && version < 2 && state.refinePrompt === LEGACY_REFINE_PROMPT_V1) {
+          state.refinePrompt = DEFAULT_REFINE_PROMPT
+        }
+        return (state ?? {}) as ChatState
+      },
       partialize: (state) => ({
         apiConfig: state.apiConfig,
         brainstormPrompt: state.brainstormPrompt,

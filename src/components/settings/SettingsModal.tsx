@@ -305,7 +305,7 @@ export function SettingsModal() {
                 <span className="text-xs text-slate-500 dark:text-slate-400">
                   {promptTab === 'brainstorm' && '引导 AI 共同探讨人物人设与背景设定'}
                   {promptTab === 'generate' && '让 AI 按规范提取并一次性生成完整 JSON'}
-                  {promptTab === 'refine' && '在已有角色卡基础上，按指令以 <actions> 标签微调字段'}
+                  {promptTab === 'refine' && '在已有角色卡基础上，按指令以 <actions> 标签微调字段（支持局部替换与补丁）'}
                 </span>
                 <button
                   className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"

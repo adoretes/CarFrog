@@ -15,6 +15,7 @@ import {
 import { useChatStore } from '../../store/chatStore'
 import { useCharaStore } from '../../store/charaStore'
 import { parseActionsFromText } from '../../utils/charaUtils'
+import type { ActionReport, ActionReportItem } from '../../types/actions'
 import type { Components } from 'react-markdown'
 
 function CollapsiblePre({ children }: { children?: React.ReactNode }) {
@@ -106,32 +107,89 @@ function fieldNameLabel(path: string): string {
   return path.replace('data.', '')
 }
 
-function ActionsSummary({ content }: { content: string }) {
-  const actions = parseActionsFromText(content)
-  if (actions.length === 0) return null
+const ACTION_LABELS: Record<string, string> = {
+  set: '设置',
+  add: '追加',
+  remove: '删除',
+  replace: '替换',
+  patch: '补丁',
+}
 
-  const modifiedFields = Array.from(
-    new Set(
-      actions.map((a) => fieldNameLabel(a.path)),
-    ),
-  )
+const FAIL_REASON_LABELS: Record<string, string> = {
+  unknown_type: '未知指令类型',
+  bad_path: '路径无效',
+  not_string: '目标不是文本',
+  empty_find: 'find 为空',
+  not_found: '未找到匹配文本',
+  count_mismatch: '匹配次数不符',
+  bad_index: '下标越界',
+  invalid_ops: '指令内容不完整',
+}
+
+function actionLabel(type: string): string {
+  return ACTION_LABELS[type] ?? type
+}
+
+function failReasonLabel(reason?: string): string {
+  if (!reason) return '未生效'
+  return FAIL_REASON_LABELS[reason] ?? reason
+}
+
+function ActionsSummary({ content, report }: { content: string; report?: ActionReport }) {
+  const items: ActionReportItem[] =
+    report && report.length > 0
+      ? report
+      : parseActionsFromText(content).map((a) => ({
+          type: a.type,
+          path: a.path,
+          index: 'index' in a ? a.index : undefined,
+          ok: true,
+        }))
+
+  if (items.length === 0) return null
+
+  const hasFailure = items.some((item) => !item.ok)
 
   return (
-    <div className="mb-2 p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 text-xs">
-      <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 font-semibold mb-1">
+    <div
+      className={`mb-2 p-2 rounded-xl border text-xs ${
+        hasFailure
+          ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200/80 dark:border-amber-800/60'
+          : 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200/80 dark:border-emerald-800/60'
+      }`}
+    >
+      <div
+        className={`flex items-center gap-1.5 font-semibold mb-1 ${
+          hasFailure ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'
+        }`}
+      >
         <Wrench className="w-3.5 h-3.5" />
-        <span>已同步应用微调指令</span>
+        <span>{hasFailure ? '部分指令未生效' : '已同步应用微调指令'}</span>
       </div>
       <div className="flex flex-wrap gap-1">
-        {modifiedFields.map((f, i) => (
+        {items.map((item, i) => (
           <span
             key={i}
-            className="px-2 py-0.5 rounded-md bg-emerald-100/70 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-[11px] font-medium"
+            title={item.ok ? undefined : failReasonLabel(item.reason)}
+            className={`px-2 py-0.5 rounded-md text-[11px] font-medium ${
+              item.ok
+                ? 'bg-emerald-100/70 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200'
+                : 'bg-amber-100/80 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200'
+            }`}
           >
-            {f}
+            {fieldNameLabel(item.path)} · {actionLabel(item.type)}
+            {!item.ok && ` — ${failReasonLabel(item.reason)}`}
+            {item.occurrences !== undefined && item.replaced !== undefined && item.occurrences > item.replaced
+              ? `（出现 ${item.occurrences} 处，已改 ${item.replaced} 处）`
+              : ''}
           </span>
         ))}
       </div>
+      {hasFailure && (
+        <p className="mt-1.5 text-[11px] leading-relaxed text-amber-700/90 dark:text-amber-300/90">
+          未生效的指令没有改动卡片，可让 AI 从卡片原文里重新复制片段后重试。
+        </p>
+      )}
     </div>
   )
 }
@@ -348,7 +406,7 @@ export function ChatMessages() {
                   ) : (
                     <>
                       {msg.content.includes('<actions>') && (
-                        <ActionsSummary content={msg.content} />
+                        <ActionsSummary content={msg.content} report={msg.actionReport} />
                       )}
                       <ReactMarkdown components={markdownComponents}>
                         {msg.content.replace(/<actions>[\s\S]*?<\/actions>/g, '')}

@@ -121,8 +121,12 @@ export function ChatInput({ files, onSendComplete }: ChatInputProps) {
         const actions = parseActionsFromText(fullContent)
         if (actions.length > 0) {
           const snapshot = structuredClone(useCharaStore.getState().card)
-          executeActions(actions)
-          useChatStore.getState().attachCardSnapshot(snapshot)
+          const report = executeActions(actions)
+          // 全部指令失败时卡片没有变化，不写快照（避免出现无意义的「回滚」按钮）
+          if (report.some((r) => r.ok)) {
+            useChatStore.getState().attachCardSnapshot(snapshot)
+          }
+          useChatStore.getState().attachActionReport(report)
         }
       }
     } catch (err) {
