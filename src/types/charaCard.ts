@@ -24,6 +24,15 @@ export interface WorldBook {
   extensions?: Record<string, unknown>
 }
 
+/** V3 的 assets 条目；本工具不消费它，但导入导出时原样保留 */
+export interface CharaAsset {
+  type: string
+  uri: string
+  name: string
+  ext: string
+  [key: string]: unknown
+}
+
 export interface CharaCardData {
   name: string
   description: string
@@ -39,15 +48,35 @@ export interface CharaCardData {
   creator: string
   character_version: string
   character_book?: WorldBook
+
+  /** V2 就存在的扩展槽，V3 也在用 */
+  extensions?: Record<string, unknown>
+
+  // ---- V3 独有字段 ----
+  // 本工具不提供编辑入口，但导入/导出必须原样保留，
+  // 否则「导入 V3 卡再导出」会静默丢掉这些数据。
+  nickname?: string
+  creator_notes_multilingual?: Record<string, string>
+  source?: string[]
+  group_only_greetings?: string[]
+  creation_date?: number
+  modification_date?: number
+  assets?: CharaAsset[]
 }
 
+export type CardSpec = 'chara_card_v2' | 'chara_card_v3'
+
 export interface CharaCardV2 {
-  spec: 'chara_card_v2'
-  spec_version: '2.0'
+  spec: CardSpec
+  spec_version: string
   data: CharaCardData
 }
 
 export type CharaCard = CharaCardV2
+
+export function isV3Card(card: CharaCard): boolean {
+  return card.spec === 'chara_card_v3'
+}
 
 export function createEmptyCharaCard(): CharaCard {
   return {

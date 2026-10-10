@@ -20,5 +20,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      # 显式类型检查：build 里的 tsc -b 受 tsbuildinfo 增量缓存影响，可能跳过实际检查
+      - run: npx tsc --noEmit -p tsconfig.json
       - run: npm test
       - run: npm run build

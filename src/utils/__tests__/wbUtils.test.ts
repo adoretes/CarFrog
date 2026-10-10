@@ -86,4 +86,66 @@ describe('parseWorldBookJson', () => {
     const result = parseWorldBookJson('{"name": "nothing"}')
     expect('error' in result).toBe(true)
   })
+
+  it('解析 V1 平铺角色卡中的 character_book（无 spec 包裹）', () => {
+    const text = JSON.stringify({
+      name: '老卡',
+      description: 'd',
+      character_book: { name: '书', entries: [{ keys: ['k'], content: 'v' }] },
+    })
+    const result = parseWorldBookJson(text)
+    expect('error' in result).toBe(false)
+    if ('error' in result) return
+    expect(result.wb.entries).toHaveLength(1)
+    expect(result.wb.name).toBe('书')
+  })
+
+  it('解析 V3 角色卡中的 character_book', () => {
+    const text = JSON.stringify({
+      spec: 'chara_card_v3',
+      spec_version: '3.0',
+      data: {
+        name: 'V3',
+        character_book: { entries: [{ keys: ['v3key'], content: 'v3 内容' }] },
+      },
+    })
+    const result = parseWorldBookJson(text)
+    expect('error' in result).toBe(false)
+    if ('error' in result) return
+    expect(result.wb.entries[0].keys).toEqual(['v3key'])
+    expect(result.source).toBe('角色卡')
+  })
+
+  it('解析顶层 character_book 形式的独立世界书', () => {
+    const text = JSON.stringify({
+      character_book: { name: '独立书', entries: [{ keys: ['a'], content: 'b' }] },
+    })
+    const result = parseWorldBookJson(text)
+    expect('error' in result).toBe(false)
+    if ('error' in result) return
+    expect(result.wb.entries).toHaveLength(1)
+  })
+
+  it('保留世界书条目的高级字段（sticky/cooldown/delay/selectiveLogic/depth）', () => {
+    const entries = [
+      {
+        keys: ['k'],
+        keysecondary: ['s'],
+        content: 'c',
+        sticky: 3,
+        cooldown: 5,
+        delay: 2,
+        depth: 7,
+        selective: true,
+        selectiveLogic: 3,
+      },
+    ]
+    const [entry] = entriesToArray(entries)
+    expect(entry.sticky).toBe(3)
+    expect(entry.cooldown).toBe(5)
+    expect(entry.delay).toBe(2)
+    expect(entry.depth).toBe(7)
+    expect(entry.selective).toBe(true)
+    expect(entry.selectiveLogic).toBe(3)
+  })
 })

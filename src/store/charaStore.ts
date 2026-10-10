@@ -9,7 +9,7 @@ import type {
   PatchOp,
   ReplaceAction,
 } from '../types/actions'
-import { ensureCharaCard } from '../utils/charaUtils'
+import { ensureCharaCard, normalizeCardInput } from '../utils/charaUtils'
 
 interface ActionResult {
   card: CharaCard
@@ -375,11 +375,10 @@ export const useCharaStore = create<CharaState>((set) => ({
       loadFromJson: (json) => {
         try {
           const parsed = JSON.parse(json)
-          if (parsed.spec && parsed.data) {
-            set({ card: ensureCharaCard(parsed) })
-            return true
-          }
-          return false
+          const normalized = normalizeCardInput(parsed)
+          if (!normalized) return false
+          set({ card: ensureCharaCard(normalized) })
+          return true
         } catch {
           return false
         }

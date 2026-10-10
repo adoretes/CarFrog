@@ -11,6 +11,7 @@ import { useCharaStore } from '../../store/charaStore'
 import { useChatStore } from '../../store/chatStore'
 import { useSessionStore } from '../../store/sessionStore'
 import { downloadJson } from '../../utils/fileUtils'
+import { ensureCharaCard, normalizeCardInput } from '../../utils/charaUtils'
 import { exportAsPng, importFromPng } from './PngExport'
 
 function fileToDataUrl(file: File): Promise<string> {
@@ -63,11 +64,13 @@ export function ExportButton() {
       const text = await file.text()
       if (useSessionStore.getState().activeId !== sessionId) return
       const parsed = JSON.parse(text)
-      if (parsed?.spec && parsed?.data) {
+      const normalized = normalizeCardInput(parsed)
+      if (normalized) {
+        const card = ensureCharaCard(normalized)
         resetChat()
         setAvatar(null)
-        setCard(parsed)
-        addMessage({ role: 'assistant', content: `✅ 已导入角色卡：${parsed.data.name || '未命名'}` })
+        setCard(card)
+        addMessage({ role: 'assistant', content: `✅ 已导入角色卡：${card.data.name || '未命名'}` })
         setMode('refine')
       } else {
         addMessage({ role: 'assistant', content: '❌ 无效的角色卡 JSON 格式' })

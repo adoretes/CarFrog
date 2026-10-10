@@ -316,6 +316,31 @@ describe('charaStore setField / loadFromJson / resetCard', () => {
     expect(useCharaStore.getState().loadFromJson('{"foo":1}')).toBe(false)
   })
 
+  it('loadFromJson 支持 V1 平铺格式（回归：原先被拒绝）', () => {
+    const v1 = JSON.stringify({
+      name: '老卡角色',
+      description: '描述',
+      personality: '性格',
+      first_mes: '开场白',
+    })
+    expect(useCharaStore.getState().loadFromJson(v1)).toBe(true)
+    expect(useCharaStore.getState().card.data.name).toBe('老卡角色')
+    expect(useCharaStore.getState().card.data.first_mes).toBe('开场白')
+  })
+
+  it('loadFromJson 支持 V3 卡且保留 V3 独有字段', () => {
+    const v3 = JSON.stringify({
+      spec: 'chara_card_v3',
+      spec_version: '3.0',
+      data: { name: 'V3角色', description: 'd', nickname: '小V', assets: [{ type: 'icon', uri: 'x', name: 'a', ext: 'png' }] },
+    })
+    expect(useCharaStore.getState().loadFromJson(v3)).toBe(true)
+    const card = useCharaStore.getState().card
+    expect(card.spec).toBe('chara_card_v3')
+    expect(card.data.nickname).toBe('小V')
+    expect(card.data.assets).toHaveLength(1)
+  })
+
   it('resetCard 恢复空卡并清空头像', () => {
     useCharaStore.getState().setField('data.name', '某角色')
     useCharaStore.getState().setAvatar('data:image/png;base64,xx')

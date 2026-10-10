@@ -18,6 +18,7 @@ import { useUiStore, applyTheme } from './store/uiStore'
 import { useChatStore } from './store/chatStore'
 import { useCharaStore } from './store/charaStore'
 import { importFromPng } from './components/export/PngExport'
+import { ensureCharaCard, normalizeCardInput } from './utils/charaUtils'
 
 export default function App() {
   const hydrated = useSessionStore((s) => s.hydrated)
@@ -118,12 +119,16 @@ export default function App() {
       try {
         const text = await file.text()
         const parsed = JSON.parse(text)
-        if (parsed?.spec && parsed?.data) {
+        const normalized = normalizeCardInput(parsed)
+        if (normalized) {
+          const card = ensureCharaCard(normalized)
           resetChat()
           setAvatar(null)
-          setCard(parsed)
-          addMessage({ role: 'assistant', content: `✅ 已成功拖拽导入角色卡：${parsed.data.name || '未命名'}` })
+          setCard(card)
+          addMessage({ role: 'assistant', content: `✅ 已成功拖拽导入角色卡：${card.data.name || '未命名'}` })
           setMode('refine')
+        } else {
+          addMessage({ role: 'assistant', content: '❌ 无效的角色卡 JSON 格式' })
         }
       } catch {
         addMessage({ role: 'assistant', content: '❌ 导入的 JSON 角色卡解析失败' })

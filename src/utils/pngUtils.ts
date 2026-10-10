@@ -1,27 +1,123 @@
+/**
+ * PNG 角色卡（tEXt / iTXt）读写。
+ *
+ * 规范要点：
+ * - V2 卡片放在名为 `chara` 的文本块，V3 放在 `ccv3`；
+ * - 文本块的值是「JSON 的 utf-8 字节再 base64」；
+ * - 同时存在 `chara` 与 `ccv3` 时，本工具优先采用先出现者（导出时为 `chara`）。
+ *
+ * 本文件所有遍历都走 chunk 结构（长度字段 + 类型 + 数据 + CRC），
+ * 不再依赖对图像字节做子串搜索——那会把像素里的 "IEND" 误判成块边界。
+ */
+
+interface PngChunk {
+  type: string
+  /** 长度字段的偏移 */
+  offset: number
+  /** 数据区起始偏移 */
+  dataOffset: number
+  length: number
+  /** 长度字段 + 类型 + 数据 + CRC 的总字节数 */
+  total: number
+}
+
+const PNG_SIGNATURE_LENGTH = 8
+const CHUNK_OVERHEAD = 12
+const TEXT_DECODER = new TextDecoder()
+const TEXT_ENCODER = new TextEncoder()
+
+/**
+ * 按 PNG 结构安全遍历 chunk。
+ * 遇到越界或长度字段超出剩余字节（截断/损坏文件）时立即停止，
+ * 绝不前进可能为 0 的步长，因此调用方不会陷入死循环。
+ */
+function* iterateChunks(view: Uint8Array, dv: DataView): Generator<PngChunk> {
+  let i = PNG_SIGNATURE_LENGTH
+  while (i + 8 <= view.length) {
+    const length = dv.getUint32(i)
+    const total = CHUNK_OVERHEAD + length
+    // 长度字段被读成超大值（>2GB）或越过文件末尾 => 文件已损坏/截断
+    if (total > view.length - i) return
+
+    const type = TEXT_DECODER.decode(view.subarray(i + 4, i + 8))
+    yield { type, offset: i, dataOffset: i + 8, length, total }
+
+    if (type === 'IEND') return
+    i += total
+  }
+}
+
+interface ParsedTextChunk {
+  keyword: string
+  text: string
+  compressed: boolean
+}
+
+/** 解析 tEXt / iTXt 的文本内容；结构不合法返回 null */
+function parseTextChunk(view: Uint8Array, chunk: PngChunk): ParsedTextChunk | null {
+  const start = chunk.dataOffset
+  const end = chunk.dataOffset + chunk.length
+  if (end > view.length) return null
+
+  const nullPos = view.indexOf(0, start)
+  if (nullPos === -1 || nullPos >= end) return null
+
+  const keyword = TEXT_DECODER.decode(view.subarray(start, nullPos))
+
+  if (chunk.type === 'tEXt') {
+    // keyword\0text
+    return { keyword, text: TEXT_DECODER.decode(view.subarray(nullPos + 1, end)), compressed: false }
+  }
+
+  // iTXt: keyword\0 compressionFlag(1) compressionMethod(1) langTag\0 translatedKeyword\0 text
+  const flagPos = nullPos + 1
+  if (flagPos + 2 > end) return null
+  const compressed = (view[flagPos] & 1) === 1
+
+  const langEnd = view.indexOf(0, flagPos + 2)
+  if (langEnd === -1 || langEnd >= end) return null
+  const translatedEnd = view.indexOf(0, langEnd + 1)
+  if (translatedEnd === -1 || translatedEnd >= end) return null
+
+  return {
+    keyword,
+    text: TEXT_DECODER.decode(view.subarray(translatedEnd + 1, end)),
+    compressed,
+  }
+}
+
+function isCardKeyword(keyword: string): boolean {
+  return keyword === 'chara' || keyword === 'ccv3'
+}
+
+/** 定位 IEND 块（返回其长度字段偏移）；找不到返回 -1 */
+export function findIendOffset(buffer: ArrayBuffer): number {
+  const view = new Uint8Array(buffer)
+  const dv = new DataView(buffer)
+  for (const chunk of iterateChunks(view, dv)) {
+    if (chunk.type === 'IEND') return chunk.offset
+  }
+  return -1
+}
+
 export function encodeTextChunk(keyword: string, text: string): ArrayBuffer {
-  const textEncoder = new TextEncoder()
-  const keywordBytes = textEncoder.encode(keyword)
-  const nullByte = new Uint8Array([0])
-  const textBytes = textEncoder.encode(text)
+  const keywordBytes = TEXT_ENCODER.encode(keyword)
+  const textBytes = TEXT_ENCODER.encode(text)
 
-  const data = new Uint8Array(keywordBytes.length + nullByte.length + textBytes.length)
+  const data = new Uint8Array(keywordBytes.length + 1 + textBytes.length)
   data.set(keywordBytes, 0)
-  data.set(nullByte, keywordBytes.length)
-  data.set(textBytes, keywordBytes.length + nullByte.length)
+  data.set([0], keywordBytes.length)
+  data.set(textBytes, keywordBytes.length + 1)
 
-  const typeBytes = textEncoder.encode('tEXt')
-  const length = data.length
-
-  const chunkData = new Uint8Array(4 + 4 + data.length + 4)
+  const chunkData = new Uint8Array(CHUNK_OVERHEAD + data.length)
   const dv = new DataView(chunkData.buffer)
 
-  dv.setUint32(0, length)
-  chunkData.set(typeBytes, 4)
+  dv.setUint32(0, data.length)
+  chunkData.set(TEXT_ENCODER.encode('tEXt'), 4)
   chunkData.set(data, 8)
 
-  const crcData = new Uint8Array(chunkData.buffer, 4, 4 + data.length)
-  const crcVal = crc32(crcData)
-  dv.setUint32(8 + data.length, crcVal)
+  const crcData = chunkData.subarray(4, 8 + data.length)
+  dv.setUint32(8 + data.length, crc32(crcData))
 
   return chunkData.buffer
 }
@@ -37,31 +133,13 @@ function crc32(data: Uint8Array): number {
   return (crc ^ 0xFFFFFFFF) >>> 0
 }
 
-export function findIendOffset(buffer: ArrayBuffer): number {
-  const view = new Uint8Array(buffer)
-  const iendMark = textToBytes('IEND')
-  for (let i = 0; i < view.length - 4; i++) {
-    if (
-      view[i] === iendMark[0] &&
-      view[i + 1] === iendMark[1] &&
-      view[i + 2] === iendMark[2] &&
-      view[i + 3] === iendMark[3]
-    ) {
-      return i - 4
-    }
-  }
-  return -1
-}
-
-function textToBytes(text: string): Uint8Array {
-  return new TextEncoder().encode(text)
-}
-
 function utf8ToBase64(str: string): string {
-  const bytes = new TextEncoder().encode(str)
+  const bytes = TEXT_ENCODER.encode(str)
   let binary = ''
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i])
+  // 分批拼装，避免大卡片时 String.fromCharCode 的参数个数超限
+  const BATCH = 0x8000
+  for (let i = 0; i < bytes.length; i += BATCH) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + BATCH))
   }
   return btoa(binary)
 }
@@ -72,7 +150,7 @@ function base64ToUtf8(base64: string): string {
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i)
   }
-  return new TextDecoder().decode(bytes)
+  return TEXT_DECODER.decode(bytes)
 }
 
 export function anyImageToPngBuffer(file: File): Promise<ArrayBuffer> {
@@ -100,68 +178,101 @@ export function anyImageToPngBuffer(file: File): Promise<ArrayBuffer> {
   })
 }
 
+/**
+ * 写入角色卡数据。
+ *
+ * 先剥掉文件里已有的 `chara` / `ccv3` 块再写入新数据：
+ * 否则旧块会留在图片里，而读取方（以及本文件的 extractJsonFromPng）
+ * 取的是先出现的那个，表现为「改名导出后重新导入还是旧数据」。
+ */
 export function embedJsonIntoPng(
   pngBuffer: ArrayBuffer,
   v2Json: string,
   v3Json?: string,
 ): ArrayBuffer {
-  const iendOffset = findIendOffset(pngBuffer)
+  const view = new Uint8Array(pngBuffer)
+  const dv = new DataView(pngBuffer)
+
+  let iendOffset = -1
+  const keptChunks: Uint8Array[] = []
+
+  for (const chunk of iterateChunks(view, dv)) {
+    if (chunk.type === 'IEND') {
+      iendOffset = chunk.offset
+      break
+    }
+    const parsed = chunk.type === 'tEXt' || chunk.type === 'iTXt' ? parseTextChunk(view, chunk) : null
+    if (parsed && isCardKeyword(parsed.keyword)) continue // 丢弃旧卡片数据
+    keptChunks.push(view.subarray(chunk.offset, chunk.offset + chunk.total))
+  }
+
   if (iendOffset === -1) return pngBuffer
 
-  const v2Chunk = encodeTextChunk('chara', utf8ToBase64(v2Json))
-  const v3Chunk = v3Json ? encodeTextChunk('ccv3', utf8ToBase64(v3Json)) : null
-
-  const head = new Uint8Array(pngBuffer, 0, iendOffset)
-  const iend = new Uint8Array(pngBuffer, iendOffset)
-
-  let totalLength = head.length + v2Chunk.byteLength
-  if (v3Chunk) totalLength += v3Chunk.byteLength
-  totalLength += iend.length
-
-  const result = new Uint8Array(totalLength)
-  result.set(head, 0)
-  result.set(new Uint8Array(v2Chunk), head.length)
-  if (v3Chunk) {
-    result.set(new Uint8Array(v3Chunk), head.length + v2Chunk.byteLength)
+  const newChunks = [new Uint8Array(encodeTextChunk('chara', utf8ToBase64(v2Json)))]
+  if (v3Json) {
+    newChunks.push(new Uint8Array(encodeTextChunk('ccv3', utf8ToBase64(v3Json))))
   }
-  result.set(iend, totalLength - iend.length)
+
+  // IEND 本身及其后的任何字节（部分工具会追加数据）原样保留
+  const tail = view.subarray(iendOffset)
+
+  const total =
+    PNG_SIGNATURE_LENGTH +
+    keptChunks.reduce((sum, c) => sum + c.length, 0) +
+    newChunks.reduce((sum, c) => sum + c.length, 0) +
+    tail.length
+
+  const result = new Uint8Array(total)
+  let offset = 0
+  result.set(view.subarray(0, PNG_SIGNATURE_LENGTH), offset)
+  offset += PNG_SIGNATURE_LENGTH
+  for (const chunk of keptChunks) {
+    result.set(chunk, offset)
+    offset += chunk.length
+  }
+  for (const chunk of newChunks) {
+    result.set(chunk, offset)
+    offset += chunk.length
+  }
+  result.set(tail, offset)
 
   return result.buffer
 }
 
+/**
+ * 提取内嵌的角色卡 JSON。
+ *
+ * 规范要求：同时存在 `ccv3` 与 `chara` 时**优先采用 `ccv3`**（信息更全），
+ * 只在不认识 V3 时才退回 `chara`。因此这里先扫一遍找 ccv3，再退回 chara，
+ * 而不是简单返回文件里第一个出现的块。
+ *
+ * 单块损坏（非法 base64、压缩的 iTXt）只跳过该块，不影响后续块。
+ */
 export function extractJsonFromPng(buffer: ArrayBuffer): string | null {
+  return (
+    findCardChunkJson(buffer, 'ccv3') ??
+    findCardChunkJson(buffer, 'chara')
+  )
+}
+
+function findCardChunkJson(buffer: ArrayBuffer, keyword: string): string | null {
   const view = new Uint8Array(buffer)
-  const textDecoder = new TextDecoder()
+  const dv = new DataView(buffer)
 
-  let i = 8
-  while (i < view.length) {
-    const dv = new DataView(buffer)
-    if (i + 8 > view.length) break
-    const length = dv.getUint32(i)
-    const type = textDecoder.decode(view.slice(i + 4, i + 8))
+  for (const chunk of iterateChunks(view, dv)) {
+    if (chunk.type !== 'tEXt' && chunk.type !== 'iTXt') continue
 
-    if (type === 'tEXt' || type === 'iTXt') {
-      const chunkData = view.slice(i + 8, i + 8 + length)
-      const nullPos = chunkData.indexOf(0)
-      if (nullPos !== -1) {
-        const keyword = textDecoder.decode(chunkData.slice(0, nullPos))
-        const textData = chunkData.slice(nullPos + 1)
+    const parsed = parseTextChunk(view, chunk)
+    if (!parsed || parsed.keyword !== keyword) continue
+    // 压缩型 iTXt 需要 inflate，同步路径无法处理，跳过而不是中断遍历
+    if (parsed.compressed) continue
 
-        if (keyword === 'chara' || keyword === 'ccv3') {
-          try {
-            const text = type === 'iTXt' ? textDecoder.decode(textData) : textDecoder.decode(textData)
-            const json = base64ToUtf8(text)
-            if (json.includes('"spec"') && json.includes('"data"')) {
-              return json
-            }
-          } catch {
-            continue
-          }
-        }
-      }
+    try {
+      const json = base64ToUtf8(parsed.text)
+      if (json.includes('"spec"') && json.includes('"data"')) return json
+    } catch {
+      continue
     }
-
-    i += 12 + length
   }
 
   return null

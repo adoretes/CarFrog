@@ -1,5 +1,6 @@
 import type { WorldBook, WorldBookEntry } from '../types'
 import { createDefaultWorldBookEntry } from '../types'
+import { isPlainObject } from './charaUtils'
 
 function normalizeKey(key: unknown): string[] {
   if (Array.isArray(key)) return key as string[]
@@ -63,20 +64,29 @@ export function parseWorldBookJson(text: string): { wb: WorldBook; source: strin
 
   const obj = parsed as Record<string, unknown>
 
-  if (obj.spec && obj.data && typeof obj.data === 'object') {
-    const data = obj.data as Record<string, unknown>
-    const cb = data.character_book as Record<string, unknown> | undefined
-    if (cb && cb.entries) {
-      return {
-        wb: {
-          name: typeof cb.name === 'string' ? cb.name : null,
-          entries: entriesToArray(cb.entries),
-          extensions: cb.extensions as Record<string, unknown> | undefined,
-        },
-        source: '角色卡',
-      }
+  /** 从容器里取出 character_book 并转成 WorldBook；没有则返回 null */
+  const extractBook = (container: Record<string, unknown>): WorldBook | null => {
+    const cb = container.character_book
+    if (!isPlainObject(cb) || !cb.entries) return null
+    return {
+      name: typeof cb.name === 'string' ? cb.name : null,
+      entries: entriesToArray(cb.entries),
+      extensions: isPlainObject(cb.extensions) ? cb.extensions : undefined,
     }
+  }
+
+  // V2 / V3：有 data 包裹
+  if (isPlainObject(obj.data)) {
+    const wb = extractBook(obj.data)
+    if (wb) return { wb, source: '角色卡' }
     return { error: '角色卡中未找到世界书数据' }
+  }
+
+  // V1 平铺角色卡或「顶层 character_book」形式的独立世界书
+  const wb = extractBook(obj)
+  if (wb) {
+    const named = typeof obj.name === 'string' && obj.name
+    return { wb, source: named ? `世界书「${obj.name}」` : '世界书' }
   }
 
   if (obj.entries) {
@@ -84,9 +94,9 @@ export function parseWorldBookJson(text: string): { wb: WorldBook; source: strin
       wb: {
         name: typeof obj.name === 'string' ? obj.name : null,
         entries: entriesToArray(obj.entries),
-        extensions: obj.extensions as Record<string, unknown> | undefined,
+        extensions: isPlainObject(obj.extensions) ? obj.extensions : undefined,
       },
-      source: obj.name ? `世界书「${obj.name}」` : '世界书',
+      source: typeof obj.name === 'string' && obj.name ? `世界书「${obj.name}」` : '世界书',
     }
   }
 

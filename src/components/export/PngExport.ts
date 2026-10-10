@@ -6,15 +6,19 @@ import {
   isPngFile,
 } from '../../utils/pngUtils'
 import type { CharaCard } from '../../types'
-import { cardToJsonString, ensureCharaCard } from '../../utils/charaUtils'
+import {
+  buildPngCardPayloads,
+  ensureCharaCard,
+  normalizeCardInput,
+} from '../../utils/charaUtils'
 
 export async function exportAsPng(
   card: CharaCard,
   imageFile: File,
 ): Promise<void> {
   const pngBuffer = await anyImageToPngBuffer(imageFile)
-  const v2Json = cardToJsonString(card)
-  const blob = cardToPngBlob(pngBuffer, v2Json)
+  const { v2Json, v3Json } = buildPngCardPayloads(card)
+  const blob = cardToPngBlob(pngBuffer, v2Json, v3Json)
   const filename = `${card.data.name || '角色卡'}.png`
   downloadBlob(blob, filename)
 }
@@ -25,9 +29,8 @@ export async function importFromPng(file: File): Promise<CharaCard | null> {
   const json = extractJsonFromPng(buffer)
   if (!json) return null
   try {
-    const parsed = JSON.parse(json)
-    if (parsed?.spec && parsed?.data) return ensureCharaCard(parsed)
-    return null
+    const normalized = normalizeCardInput(JSON.parse(json))
+    return normalized ? ensureCharaCard(normalized) : null
   } catch {
     return null
   }

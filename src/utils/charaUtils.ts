@@ -1,39 +1,115 @@
 import type { CharaAction, ApiMessage, ContentPart, ChatMessage } from '../types/actions'
-import type { CharaCard } from '../types'
+import type { CharaCard, CharaCardData } from '../types'
 import { createEmptyCharaCard } from '../types'
 import { entriesToArray } from './wbUtils'
 
-export function ensureCharaCard(raw: Partial<CharaCard>): CharaCard {
-  const d = createEmptyCharaCard()
-  const data: CharaCard['data'] = {
-    name: raw.data?.name ?? d.data.name,
-    description: raw.data?.description ?? d.data.description,
-    personality: raw.data?.personality ?? d.data.personality,
-    scenario: raw.data?.scenario ?? d.data.scenario,
-    first_mes: raw.data?.first_mes ?? d.data.first_mes,
-    mes_example: raw.data?.mes_example ?? d.data.mes_example,
-    creator_notes: raw.data?.creator_notes ?? d.data.creator_notes,
-    system_prompt: raw.data?.system_prompt ?? d.data.system_prompt,
-    post_history_instructions: raw.data?.post_history_instructions ?? d.data.post_history_instructions,
-    alternate_greetings: Array.isArray(raw.data?.alternate_greetings) ? raw.data!.alternate_greetings : [],
-    tags: Array.isArray(raw.data?.tags) ? raw.data!.tags : [],
-    creator: raw.data?.creator ?? d.data.creator,
-    character_version: raw.data?.character_version ?? d.data.character_version,
+/** 从任意对象安全取字符串字段 */
+function str(source: Record<string, unknown> | undefined, key: string): string | undefined {
+  const value = source?.[key]
+  return typeof value === 'string' ? value : undefined
+}
+
+/** 从任意对象安全取字符串数组字段 */
+function strArray(source: Record<string, unknown> | undefined, key: string): string[] | undefined {
+  const value = source?.[key]
+  if (!Array.isArray(value)) return undefined
+  return value.filter((v): v is string => typeof v === 'string')
+}
+
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/** V1 平铺卡的特征字段（出现越多越可信） */
+const V1_FLAT_KEYS = ['name', 'description', 'personality', 'first_mes', 'scenario', 'mes_example']
+
+/**
+ * 判断是否是本工具认识的卡片外层结构。
+ *
+ * V1 老卡（chub.ai 等）是**顶层平铺**的：`{ name, description, ... }`，
+ * 没有 spec/data 包裹。这里把两种形状统一判定，避免导入路径各自散落 `spec && data` 判断。
+ *
+ * V1 判定要求至少命中 2 个特征字段：`{"name": "..."}` 这种随手写的 JSON
+ * （模型在头脑风暴里很常见）不应被误判成角色卡而触发自动切换精修模式。
+ */
+export function normalizeCardInput(raw: unknown): Partial<CharaCard> | null {
+  if (!isPlainObject(raw)) return null
+
+  // V2 / V3：有 data 包裹（spec 可能缺失或拼错，尽量宽容）
+  if (isPlainObject(raw.data)) {
+    return raw as unknown as Partial<CharaCard>
   }
 
-  if (raw.data?.character_book) {
+  const hits = V1_FLAT_KEYS.filter((k) => typeof raw[k] === 'string').length
+  if (hits >= 2) {
+    return { spec: 'chara_card_v2', spec_version: '2.0', data: raw as unknown as CharaCardData }
+  }
+
+  return null
+}
+
+/** 以字符串键读写任意对象（用于搬运扩展字段） */
+function asRecord(value: unknown): Record<string, unknown> {
+  return isPlainObject(value) ? value : {}
+}
+
+/**
+ * 归一化角色卡：补全缺失字段，同时**保留** V2/V3 的扩展与 V3 独有字段。
+ *
+ * 刻意不做「白名单重建」——那会让 V3 的 nickname / assets /
+ * group_only_greetings 等在导入即静默丢失。
+ */
+export function ensureCharaCard(raw: Partial<CharaCard> | null | undefined): CharaCard {
+  const normalized = normalizeCardInput(raw) ?? {}
+  const rawData = asRecord((normalized as { data?: unknown }).data)
+
+  const empty = createEmptyCharaCard().data
+
+  const data: CharaCardData = {
+    name: str(rawData, 'name') ?? empty.name,
+    description: str(rawData, 'description') ?? empty.description,
+    personality: str(rawData, 'personality') ?? empty.personality,
+    scenario: str(rawData, 'scenario') ?? empty.scenario,
+    first_mes: str(rawData, 'first_mes') ?? empty.first_mes,
+    mes_example: str(rawData, 'mes_example') ?? empty.mes_example,
+    creator_notes: str(rawData, 'creator_notes') ?? empty.creator_notes,
+    system_prompt: str(rawData, 'system_prompt') ?? empty.system_prompt,
+    post_history_instructions:
+      str(rawData, 'post_history_instructions') ?? empty.post_history_instructions,
+    alternate_greetings: strArray(rawData, 'alternate_greetings') ?? [],
+    tags: strArray(rawData, 'tags') ?? [],
+    creator: str(rawData, 'creator') ?? empty.creator,
+    character_version: str(rawData, 'character_version') ?? empty.character_version,
+  }
+
+  // 原样搬运未知/扩展字段（含 V3 独有字段与未来的第三方扩展）
+  const KNOWN: (keyof CharaCardData)[] = [
+    'name', 'description', 'personality', 'scenario', 'first_mes', 'mes_example',
+    'creator_notes', 'system_prompt', 'post_history_instructions',
+    'alternate_greetings', 'tags', 'creator', 'character_version', 'character_book',
+  ]
+  for (const [key, value] of Object.entries(rawData)) {
+    if (KNOWN.includes(key as keyof CharaCardData)) continue
+    if (value === undefined) continue
+    ;(data as unknown as Record<string, unknown>)[key] = value
+  }
+
+  if (rawData.character_book !== undefined && rawData.character_book !== null) {
+    const cb = isPlainObject(rawData.character_book) ? rawData.character_book : {}
     data.character_book = {
-      name: raw.data.character_book.name ?? null,
-      entries: entriesToArray(raw.data.character_book.entries),
-      extensions: raw.data.character_book.extensions ?? {},
+      name: typeof cb.name === 'string' ? cb.name : null,
+      entries: entriesToArray(cb.entries),
+      ...(isPlainObject(cb.extensions) ? { extensions: cb.extensions } : {}),
     }
   }
 
-  return {
-    spec: (raw.spec as CharaCard['spec']) || d.spec,
-    spec_version: (raw.spec_version as CharaCard['spec_version']) || d.spec_version,
-    data,
-  }
+  const rawSpec = (normalized as { spec?: unknown }).spec
+  const spec = rawSpec === 'chara_card_v3' ? 'chara_card_v3' : 'chara_card_v2'
+  const rawVersion = (normalized as { spec_version?: unknown }).spec_version
+  const specVersion =
+    typeof rawVersion === 'string' && rawVersion ? rawVersion : spec === 'chara_card_v3' ? '3.0' : '2.0'
+
+  return { spec, spec_version: specVersion, data }
 }
 
 function tryParseJson(text: string): unknown {
@@ -67,27 +143,116 @@ export function parseActionsFromText(text: string): CharaAction[] {
   return []
 }
 
+/**
+ * 从模型回复中提取角色卡 JSON。
+ *
+ * 宽容策略（模型经常不听话）：
+ * - 优先取 ```json 围栏；没有围栏时退化为扫描第一个平衡的 {...} 块；
+ * - 同时接受 V2/V3（有 data 包裹）与 V1（顶层平铺）。
+ */
 export function parseJsonFromText(text: string): CharaCard | null {
-  const match = text.match(/```json\s*([\s\S]*?)```/)
-  if (!match) return null
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  const candidates: string[] = []
 
-  const raw = match[1].trim()
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(raw)
-  } catch {
-    return null
+  if (fenced) {
+    candidates.push(fenced[1].trim())
+  } else {
+    // 无围栏：扫描平衡大括号，挑最外层对象
+    const start = text.indexOf('{')
+    if (start !== -1) {
+      let depth = 0
+      let inString = false
+      let escaped = false
+      for (let i = start; i < text.length; i++) {
+        const ch = text[i]
+        if (inString) {
+          if (escaped) escaped = false
+          else if (ch === '\\') escaped = true
+          else if (ch === '"') inString = false
+          continue
+        }
+        if (ch === '"') inString = true
+        else if (ch === '{') depth++
+        else if (ch === '}') {
+          depth--
+          if (depth === 0) {
+            candidates.push(text.slice(start, i + 1))
+            break
+          }
+        }
+      }
+    }
   }
 
-  if (parsed && typeof parsed === 'object' && 'spec' in (parsed as Record<string, unknown>) && 'data' in (parsed as Record<string, unknown>)) {
-    return ensureCharaCard(parsed as Partial<CharaCard>)
+  for (const raw of candidates) {
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(raw)
+    } catch {
+      continue
+    }
+    const normalized = normalizeCardInput(parsed)
+    if (normalized) return ensureCharaCard(normalized)
   }
+
   return null
 }
 
 export function cardToJsonString(card: CharaCard): string {
   return JSON.stringify(card, null, 2)
+}
+
+/** V3 独有字段：回填 V2 时需要剥离 */
+const V3_ONLY_KEYS = [
+  'nickname',
+  'creator_notes_multilingual',
+  'source',
+  'group_only_greetings',
+  'creation_date',
+  'modification_date',
+  'assets',
+] as const
+
+const V2_BACKFILL_NOTICE =
+  'This character card is Character Card V3, but it is loaded as a Character Card V2. ' +
+  'Please use a Character Card V3 compatible application to use this character card properly.'
+
+/**
+ * 生成 V3 卡片回填用的 V2 对象。
+ *
+ * V3 规范要求：写入 `ccv3` 块时，也应在 `chara` 块放一份 V2 回填，
+ * 让不认识 V3 的前端仍能读到角色；并**应当**在 creator_notes 里说明这是回填降级。
+ */
+export function buildV2Backfill(card: CharaCard): CharaCard {
+  const data: CharaCardData = { ...card.data }
+  for (const key of V3_ONLY_KEYS) {
+    delete (data as unknown as Record<string, unknown>)[key]
+  }
+  const note = data.creator_notes ? `${data.creator_notes}\n\n${V2_BACKFILL_NOTICE}` : V2_BACKFILL_NOTICE
+  data.creator_notes = note
+
+  return { spec: 'chara_card_v2', spec_version: '2.0', data }
+}
+
+/**
+ * 组装写进 PNG 的载荷。
+ *
+ * - V2 卡：只写 `chara`，保持与旧版本一致的产物；
+ * - V3 卡：写 `chara`（V2 回填）+ `ccv3`（完整 V3）。
+ *   `chara` 放前面，使不认识 V3 的工具按「取第一个」的习惯拿到可用的降级卡。
+ */
+export function buildPngCardPayloads(card: CharaCard): { v2Json: string; v3Json?: string } {
+  if (card.spec === 'chara_card_v3') {
+    return {
+      v2Json: cardToJsonString(buildV2Backfill(card)),
+      v3Json: cardToJsonString({
+        ...card,
+        spec: 'chara_card_v3',
+        spec_version: card.spec_version || '3.0',
+      }),
+    }
+  }
+  return { v2Json: cardToJsonString(card) }
 }
 
 const V2_SPEC_TEMPLATE = `{

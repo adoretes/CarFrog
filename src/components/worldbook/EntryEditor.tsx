@@ -132,9 +132,49 @@ export function EntryEditor({ entry, index, onChange, onRemove }: EntryEditorPro
             ))}
           </div>
           <KeyInput
+            placeholder="输入关键词后回车添加..."
             onAdd={(key) => {
               if (!entry.keys.includes(key)) {
                 update({ keys: [...entry.keys, key] })
+              }
+            }}
+          />
+        </div>
+
+        <div>
+          <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+            次级关键词 (Secondary Keys)
+            <span className="ml-1 text-slate-400 font-normal">
+              — 配合「选择性触发」做 AND / NOT 组合
+            </span>
+          </label>
+          <div className="flex flex-wrap gap-1.5 mb-1.5">
+            {(entry.keysecondary ?? []).map((k, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-50 dark:bg-sky-950/50 text-sky-800 dark:text-sky-200 rounded-lg text-xs border border-sky-200/60 dark:border-sky-800/60"
+              >
+                <Tag className="w-2.5 h-2.5 opacity-50" />
+                <span>{k}</span>
+                <button
+                  type="button"
+                  className="text-sky-400 hover:text-rose-500"
+                  onClick={() => {
+                    const next = (entry.keysecondary ?? []).filter((_, j) => j !== i)
+                    update({ keysecondary: next })
+                  }}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+          <KeyInput
+            placeholder="输入次级关键词后回车添加..."
+            onAdd={(key) => {
+              const current = entry.keysecondary ?? []
+              if (!current.includes(key)) {
+                update({ keysecondary: [...current, key] })
               }
             }}
           />
@@ -154,49 +194,135 @@ export function EntryEditor({ entry, index, onChange, onRemove }: EntryEditorPro
         </div>
 
         {/* 高级参数折叠 */}
-        <div className="pt-2 border-t border-slate-100 dark:border-slate-700/60 grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-          <label className="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200/60 dark:border-slate-700/60 cursor-pointer">
-            <input
-              type="checkbox"
-              className="rounded text-brand-600 focus:ring-brand-500"
-              checked={entry.enabled !== false}
-              onChange={(e) => update({ enabled: e.target.checked })}
-            />
-            <span className="text-[11px] text-slate-600 dark:text-slate-300">启用该条目</span>
-          </label>
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-700/60 space-y-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+            <label className="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200/60 dark:border-slate-700/60 cursor-pointer">
+              <input
+                type="checkbox"
+                className="rounded text-brand-600 focus:ring-brand-500"
+                checked={entry.enabled !== false}
+                onChange={(e) => update({ enabled: e.target.checked })}
+              />
+              <span className="text-[11px] text-slate-600 dark:text-slate-300">启用该条目</span>
+            </label>
 
-          <label className="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200/60 dark:border-slate-700/60 cursor-pointer">
-            <input
-              type="checkbox"
-              className="rounded text-brand-600 focus:ring-brand-500"
-              checked={entry.constant || false}
-              onChange={(e) => update({ constant: e.target.checked })}
-            />
-            <span className="text-[11px] text-slate-600 dark:text-slate-300">始终常驻</span>
-          </label>
+            <label className="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200/60 dark:border-slate-700/60 cursor-pointer">
+              <input
+                type="checkbox"
+                className="rounded text-brand-600 focus:ring-brand-500"
+                checked={entry.constant || false}
+                onChange={(e) => update({ constant: e.target.checked })}
+              />
+              <span className="text-[11px] text-slate-600 dark:text-slate-300">始终常驻</span>
+            </label>
 
-          <div>
-            <label className="block text-[10px] text-slate-400 mb-0.5">插入位置</label>
-            <select
-              className="w-full px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100"
-              value={typeof entry.position === 'number' ? entry.position.toString() : (entry.position || 'before_char')}
-              onChange={(e) => update({ position: e.target.value })}
+            <label
+              className="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200/60 dark:border-slate-700/60 cursor-pointer"
+              title="开启后需同时命中次级关键词，才按下方逻辑决定是否注入"
             >
-              <option value="before_char">角色定义前</option>
-              <option value="after_char">角色定义后</option>
-              <option value="0">0 (顶层)</option>
-              <option value="1">1</option>
-            </select>
+              <input
+                type="checkbox"
+                className="rounded text-brand-600 focus:ring-brand-500"
+                checked={entry.selective || false}
+                onChange={(e) => update({ selective: e.target.checked })}
+              />
+              <span className="text-[11px] text-slate-600 dark:text-slate-300">选择性触发</span>
+            </label>
+
+            <div>
+              <label className="block text-[10px] text-slate-400 mb-0.5">插入位置</label>
+              <select
+                className="w-full px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100"
+                value={typeof entry.position === 'number' ? entry.position.toString() : (entry.position || 'before_char')}
+                onChange={(e) => update({ position: e.target.value })}
+              >
+                <option value="before_char">角色定义前</option>
+                <option value="after_char">角色定义后</option>
+                <option value="0">0 (顶层)</option>
+                <option value="1">1</option>
+              </select>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-[10px] text-slate-400 mb-0.5">优先级 (Order)</label>
-            <input
-              className="w-full px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100"
-              type="number"
-              value={entry.order ?? 100}
-              onChange={(e) => update({ order: parseInt(e.target.value) || 100 })}
-            />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+            <div>
+              <label className="block text-[10px] text-slate-400 mb-0.5">优先级 (Order)</label>
+              <input
+                className="w-full px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100"
+                type="number"
+                value={entry.order ?? 100}
+                onChange={(e) => update({ order: parseInt(e.target.value) || 100 })}
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] text-slate-400 mb-0.5" title="按 @ D 深度插入时的位置">
+                插入深度 (Depth)
+              </label>
+              <input
+                className="w-full px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100"
+                type="number"
+                min={0}
+                value={entry.depth ?? 4}
+                onChange={(e) => update({ depth: Math.max(0, parseInt(e.target.value) || 0) })}
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] text-slate-400 mb-0.5">选择性逻辑</label>
+              <select
+                className="w-full px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 disabled:opacity-50"
+                disabled={!entry.selective}
+                value={entry.selectiveLogic ?? 0}
+                onChange={(e) => update({ selectiveLogic: parseInt(e.target.value) })}
+              >
+                <option value={0}>AND ANY（任一命中）</option>
+                <option value={1}>NOT ALL（非全中）</option>
+                <option value={2}>NOT ANY（全不中）</option>
+                <option value={3}>AND ALL（全部命中）</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] text-slate-400 mb-0.5" title="触发后保持生效的对话轮数">
+                粘性 (Sticky)
+              </label>
+              <input
+                className="w-full px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100"
+                type="number"
+                min={0}
+                value={entry.sticky ?? 0}
+                onChange={(e) => update({ sticky: Math.max(0, parseInt(e.target.value) || 0) })}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+            <div>
+              <label className="block text-[10px] text-slate-400 mb-0.5" title="触发后进入冷却的对话轮数">
+                冷却 (Cooldown)
+              </label>
+              <input
+                className="w-full px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100"
+                type="number"
+                min={0}
+                value={entry.cooldown ?? 0}
+                onChange={(e) => update({ cooldown: Math.max(0, parseInt(e.target.value) || 0) })}
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] text-slate-400 mb-0.5" title="命中关键词后延迟多少轮才注入">
+                延迟 (Delay)
+              </label>
+              <input
+                className="w-full px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100"
+                type="number"
+                min={0}
+                value={entry.delay ?? 0}
+                onChange={(e) => update({ delay: Math.max(0, parseInt(e.target.value) || 0) })}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -204,7 +330,7 @@ export function EntryEditor({ entry, index, onChange, onRemove }: EntryEditorPro
   )
 }
 
-function KeyInput({ onAdd }: { onAdd: (key: string) => void }) {
+function KeyInput({ onAdd, placeholder = '输入关键词后回车添加...' }: { onAdd: (key: string) => void; placeholder?: string }) {
   const [value, setValue] = useState('')
 
   const handleAdd = () => {
@@ -219,7 +345,7 @@ function KeyInput({ onAdd }: { onAdd: (key: string) => void }) {
     <div className="flex gap-1.5">
       <input
         className="flex-1 px-2.5 py-1 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500 text-slate-800 dark:text-slate-100 placeholder-slate-400"
-        placeholder="输入关键词后回车添加..."
+        placeholder={placeholder}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => {
