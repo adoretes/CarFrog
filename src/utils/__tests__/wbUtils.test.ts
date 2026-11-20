@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { entriesToArray, parseWorldBookJson } from '../wbUtils'
+import { entriesToArray, ensureUniqueEntryIds, parseWorldBookJson } from '../wbUtils'
 
 describe('entriesToArray', () => {
   it('数组型 entries 兼容 SillyTavern 旧键名', () => {
@@ -38,6 +38,62 @@ describe('entriesToArray', () => {
     expect(entriesToArray(null)).toEqual([])
     expect(entriesToArray(42)).toEqual([])
     expect(entriesToArray('str')).toEqual([])
+  })
+
+  it('数组型 entries 中重复的 uid/id 会被重新分配为唯一 id', () => {
+    const result = entriesToArray([
+      { keys: ['a'], content: 'A', uid: 1 },
+      { keys: ['b'], content: 'B', uid: 1 },
+      { keys: ['c'], content: 'C', id: 1 },
+    ])
+    expect(result.map((e) => e.id)).toEqual([1, 2, 3])
+  })
+
+  it('对象型 entries 无 uid 时用对象键作为 id', () => {
+    const result = entriesToArray({
+      '5': { key: ['五'], content: 'c5' },
+      '2': { key: ['二'], content: 'c2' },
+    })
+    expect(result.map((e) => e.id)).toEqual([2, 5])
+  })
+})
+
+describe('ensureUniqueEntryIds', () => {
+  it('保留首次出现的 id，重复 id 与无 id 条目重新分配', () => {
+    const entries = [
+      { keys: [], content: 'a', id: 0 },
+      { keys: [], content: 'b', id: 0 },
+      { keys: [], content: 'c' },
+      { keys: [], content: 'd', id: 1 },
+    ]
+    const result = ensureUniqueEntryIds(entries)
+    const ids = result.map((e) => e.id)
+    expect(new Set(ids).size).toBe(entries.length)
+    expect(result[0].id).toBe(0)
+    expect(result[3].id).toBe(1)
+    expect(result.map((e) => e.content)).toEqual(['a', 'b', 'c', 'd'])
+  })
+
+  it('追加合并后已有与导入条目 id 不再冲突', () => {
+    const existing = [
+      { keys: [], content: '旧 0', id: 0 },
+      { keys: [], content: '旧 1', id: 1 },
+    ]
+    const imported = [
+      { keys: [], content: '新 0', id: 0 },
+      { keys: [], content: '新 1', id: 1 },
+    ]
+    const merged = ensureUniqueEntryIds([...existing, ...imported])
+    const ids = merged.map((e) => e.id)
+    expect(new Set(ids).size).toBe(4)
+    expect(merged[0].id).toBe(0)
+    expect(merged[1].id).toBe(1)
+    expect(merged[2].id).toBe(2)
+    expect(merged[3].id).toBe(3)
+  })
+
+  it('空数组返回空数组', () => {
+    expect(ensureUniqueEntryIds([])).toEqual([])
   })
 })
 

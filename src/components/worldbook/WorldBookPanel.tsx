@@ -12,7 +12,7 @@ import { useChatStore } from '../../store/chatStore'
 import { useSessionStore } from '../../store/sessionStore'
 import { EntryEditor } from './EntryEditor'
 import { createDefaultWorldBookEntry } from '../../types'
-import { parseWorldBookJson } from '../../utils/wbUtils'
+import { ensureUniqueEntryIds, parseWorldBookJson } from '../../utils/wbUtils'
 import type { WorldBook } from '../../types'
 
 export function WorldBookPanel() {
@@ -82,13 +82,18 @@ export function WorldBookPanel() {
     }
     const imported = importModal.wb
     if (mode === 'replace') {
-      setField('data.character_book', imported)
+      setField('data.character_book', {
+        ...imported,
+        entries: ensureUniqueEntryIds(imported.entries),
+      })
       addMessage({ role: 'assistant', content: `✅ 已替换为${importModal.source}（${imported.entries.length} 条条目）` })
     } else {
       const existing = card.data.character_book ?? { name: card.data.name || null, entries: [] }
+      // 追加时两批条目可能各自从 0 开始编号，合并后必须重新保证 id 唯一
+      const merged = ensureUniqueEntryIds([...existing.entries, ...imported.entries])
       setField('data.character_book', {
         ...existing,
-        entries: [...existing.entries, ...imported.entries],
+        entries: merged,
       })
       addMessage({ role: 'assistant', content: `✅ 已追加 ${imported.entries.length} 条条目到世界书` })
     }

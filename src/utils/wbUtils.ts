@@ -36,16 +36,53 @@ function entriesObjectToArray(entries: Record<string, unknown>): WorldBookEntry[
     if (!isNaN(na) && !isNaN(nb)) return na - nb
     return a.localeCompare(b)
   })
-  return keys.map(k => normalizeWorldBookEntry(entries[k] as Record<string, unknown>))
+  return keys.map(k => {
+    const entry = normalizeWorldBookEntry(entries[k] as Record<string, unknown>)
+    // SillyTavern 的对象型 entries 用对象键存 uid；条目本身没有 uid/id 时回退到键名，
+    // 否则所有条目都会变成无 id，导出后彼此“重复”。
+    if (entry.id === undefined && k.trim() !== '') {
+      const n = Number(k)
+      if (Number.isInteger(n)) return { ...entry, id: n }
+    }
+    return entry
+  })
+}
+
+/**
+ * 让世界书条目的 id 保持唯一。
+ *
+ * 规则：某个 id 第一次出现时保留，之后重复出现的条目（以及原本没有 id 的条目）
+ * 会被分配一个全新的、从未用过的 id。这样无论是导入单个本身就含重复 id 的文件，
+ * 还是把导入条目追加到已有条目之后，都不会再出现 id 冲突。
+ */
+export function ensureUniqueEntryIds(entries: WorldBookEntry[]): WorldBookEntry[] {
+  let next = 0
+  for (const entry of entries) {
+    if (typeof entry.id === 'number' && Number.isFinite(entry.id)) {
+      next = Math.max(next, Math.floor(entry.id) + 1)
+    }
+  }
+  const seen = new Set<number>()
+  return entries.map(entry => {
+    if (typeof entry.id === 'number' && Number.isFinite(entry.id) && !seen.has(entry.id)) {
+      seen.add(entry.id)
+      return entry
+    }
+    const id = next++
+    seen.add(id)
+    return { ...entry, id }
+  })
 }
 
 export function entriesToArray(entries: unknown): WorldBookEntry[] {
   if (!entries) return []
   if (Array.isArray(entries)) {
-    return entries.map(e => normalizeWorldBookEntry(e as Record<string, unknown>))
+    return ensureUniqueEntryIds(
+      entries.map(e => normalizeWorldBookEntry(e as Record<string, unknown>)),
+    )
   }
   if (typeof entries === 'object') {
-    return entriesObjectToArray(entries as Record<string, unknown>)
+    return ensureUniqueEntryIds(entriesObjectToArray(entries as Record<string, unknown>))
   }
   return []
 }
